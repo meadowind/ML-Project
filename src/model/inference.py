@@ -1,7 +1,6 @@
 """
 Shared inference utility for batch inference and testing.
 """
-
 import json
 from pathlib import Path
 from typing import List, Tuple

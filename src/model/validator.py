@@ -83,3 +83,4 @@ class InputValidator:
         return ValidationResult(
             True, "PASSED", blur_score=laplacian_var, foliage_ratio=foliage_ratio
         ), pil_img
+    

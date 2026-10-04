@@ -1,7 +1,6 @@
 """
 Reproducible training and artifact export for lemon_classifier_v2.
 """
-
 import hashlib
 import json
 import logging
