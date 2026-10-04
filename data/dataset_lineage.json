@@ -3,29 +3,44 @@
   "huggingface_repo": "Project-AgML/lemon_leaf_disease_classification",
   "revision_pinned": "04a1183c2c2902ef52ca73171a190f75f1e2dbfa",
   "license": "CC BY 4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
   "attribution": "Dataset provided by Project-AgML on Hugging Face. Used under CC BY 4.0.",
+  "modifications": "Re-saved to 95% JPEG, partitioned into stratified 70/15/15 splits, unified folder hierarchy.",
+  "random_seed": 42,
   "splits": {
     "train": {
-      "Dry Leaf": 155,
-      "Healthy Leaf": 173,
-      "Sooty Mould": 123,
-      "Bacterial Blight": 84,
-      "Citrus Canker": 143,
-      "Deficiency Leaf": 148,
-      "Spider Mites": 96,
-      "Curl Virus": 85,
-      "Anthracnose": 76
+      "Anthracnose": 70,
+      "Bacterial_Blight": 73,
+      "Citrus_Canker": 125,
+      "Curl_Virus": 80,
+      "Deficiency_Leaf": 135,
+      "Dry_Leaf": 130,
+      "Healthy_Leaf": 147,
+      "Sooty_Mould": 107,
+      "Spider_Mites": 80
     },
     "validation": {
-      "Dry Leaf": 31,
-      "Curl Virus": 30,
-      "Deficiency Leaf": 45,
-      "Spider Mites": 18,
-      "Citrus Canker": 35,
-      "Sooty Mould": 30,
-      "Anthracnose": 24,
-      "Healthy Leaf": 37,
-      "Bacterial Blight": 21
+      "Anthracnose": 15,
+      "Bacterial_Blight": 16,
+      "Citrus_Canker": 26,
+      "Curl_Virus": 18,
+      "Deficiency_Leaf": 29,
+      "Dry_Leaf": 28,
+      "Healthy_Leaf": 31,
+      "Sooty_Mould": 23,
+      "Spider_Mites": 17
+    },
+    "test": {
+      "Anthracnose": 15,
+      "Bacterial_Blight": 16,
+      "Citrus_Canker": 27,
+      "Curl_Virus": 17,
+      "Deficiency_Leaf": 29,
+      "Dry_Leaf": 28,
+      "Healthy_Leaf": 32,
+      "Sooty_Mould": 23,
+      "Spider_Mites": 17
     }
-  }
+  },
+  "processed_dir_sha256": "de9e6aae1591644ac14a7f50e27a003eb3fec5f37318a40d3058b86b67452630"
 }

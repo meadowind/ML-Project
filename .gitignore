@@ -1,7 +1,15 @@
 .venv/
 __pycache__/
 *.pyc
-data/processed/
 data/raw/
-models/registry/*.pt
+data/processed/
+data/intake/
+data/output/
+data/archive/
+data/quarantine/
 .env
+
+!models/registry/
+!models/registry/**
+!models/registry/**/*.pt
+!models/registry/**/*.json

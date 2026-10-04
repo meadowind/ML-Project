@@ -1,0 +1,196 @@
+{
+  "model_name": "lemon_leaf_classifier",
+  "version": "v2.0.0",
+  "training_date": "2026-10-04T16:58:58Z",
+  "git_commit": "8f634c366869c7670dc3667f8c65509603dc4eaf",
+  "framework_versions": {
+    "torch": "2.14.0+cpu",
+    "numpy": "2.5.3"
+  },
+  "hyperparameters": {
+    "architecture": "mobilenet_v3_small",
+    "epochs": 5,
+    "batch_size": 32,
+    "learning_rate": 0.001,
+    "seed": 42
+  },
+  "classes": [
+    "Anthracnose",
+    "Bacterial_Blight",
+    "Citrus_Canker",
+    "Curl_Virus",
+    "Deficiency_Leaf",
+    "Dry_Leaf",
+    "Healthy_Leaf",
+    "Sooty_Mould",
+    "Spider_Mites"
+  ],
+  "metrics": {
+    "best_val_accuracy": 0.9409,
+    "test_accuracy": 0.9412,
+    "macro_f1": 0.9433,
+    "per_class_recall": {
+      "Anthracnose": 1.0,
+      "Bacterial_Blight": 1.0,
+      "Citrus_Canker": 1.0,
+      "Curl_Virus": 0.7647,
+      "Deficiency_Leaf": 0.931,
+      "Dry_Leaf": 1.0,
+      "Healthy_Leaf": 1.0,
+      "Sooty_Mould": 0.8261,
+      "Spider_Mites": 0.8824
+    },
+    "confusion_matrix": [
+      [
+        15,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        16,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        27,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        13,
+        0,
+        0,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        1,
+        0,
+        27,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        28,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        32,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        19,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        15
+      ]
+    ],
+    "clean_test_low_confidence_pct": 1.96
+  },
+  "dataset_lineage": {
+    "dataset_name": "Lemon Leaf Disease Classification",
+    "huggingface_repo": "Project-AgML/lemon_leaf_disease_classification",
+    "revision_pinned": "04a1183c2c2902ef52ca73171a190f75f1e2dbfa",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Dataset provided by Project-AgML on Hugging Face. Used under CC BY 4.0.",
+    "modifications": "Re-saved to 95% JPEG, partitioned into stratified 70/15/15 splits, unified folder hierarchy.",
+    "random_seed": 42,
+    "splits": {
+      "train": {
+        "Anthracnose": 70,
+        "Bacterial_Blight": 73,
+        "Citrus_Canker": 125,
+        "Curl_Virus": 80,
+        "Deficiency_Leaf": 135,
+        "Dry_Leaf": 130,
+        "Healthy_Leaf": 147,
+        "Sooty_Mould": 107,
+        "Spider_Mites": 80
+      },
+      "validation": {
+        "Anthracnose": 15,
+        "Bacterial_Blight": 16,
+        "Citrus_Canker": 26,
+        "Curl_Virus": 18,
+        "Deficiency_Leaf": 29,
+        "Dry_Leaf": 28,
+        "Healthy_Leaf": 31,
+        "Sooty_Mould": 23,
+        "Spider_Mites": 17
+      },
+      "test": {
+        "Anthracnose": 15,
+        "Bacterial_Blight": 16,
+        "Citrus_Canker": 27,
+        "Curl_Virus": 17,
+        "Deficiency_Leaf": 29,
+        "Dry_Leaf": 28,
+        "Healthy_Leaf": 32,
+        "Sooty_Mould": 23,
+        "Spider_Mites": 17
+      }
+    },
+    "processed_dir_sha256": "de9e6aae1591644ac14a7f50e27a003eb3fec5f37318a40d3058b86b67452630"
+  },
+  "artifacts": {
+    "weights_pt_sha256": "30479f024b88a92801725bcb545fc24359f714b9e078f4645fb15fd06712bcf4",
+    "torchscript_sha256": "d9dee6f0d481d8f53bfa52460dfd0811cd228b5cc443b157783d6db098a9df21"
+  }
+}
