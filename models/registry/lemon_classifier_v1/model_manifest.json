@@ -51,4 +51,5 @@
     "weights": "weights.pt",
     "torchscript": "model.torchscript.pt"
   }
+  
 }
