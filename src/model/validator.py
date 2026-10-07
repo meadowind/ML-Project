@@ -21,7 +21,7 @@ class ValidationResult:
 class InputValidator:
     def __init__(
         self,
-        blur_threshold: float = 65.0,
+        blur_threshold: float = 0.0,
         foliage_threshold: float = 0.05,
         enable_blur_check: bool = True,
         enable_ood_check: bool = True,
