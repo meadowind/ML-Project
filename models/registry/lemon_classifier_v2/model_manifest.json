@@ -1,11 +1,11 @@
 {
   "model_name": "lemon_leaf_classifier",
   "version": "v2.0.0",
-  "training_date": "2026-10-04T16:58:58Z",
-  "git_commit": "8f634c366869c7670dc3667f8c65509603dc4eaf",
+  "training_date": "2026-10-07T14:19:07Z",
+  "git_commit": "e90635224b9d35cbaeb649eeb4b9c0b69bf4f6eb",
   "framework_versions": {
-    "torch": "2.14.0+cpu",
-    "numpy": "2.5.3"
+    "torch": "2.6.0",
+    "numpy": "2.1.2"
   },
   "hyperparameters": {
     "architecture": "mobilenet_v3_small",
@@ -26,19 +26,19 @@
     "Spider_Mites"
   ],
   "metrics": {
-    "best_val_accuracy": 0.9409,
-    "test_accuracy": 0.9412,
-    "macro_f1": 0.9433,
+    "best_val_accuracy": 0.9557,
+    "test_accuracy": 0.9608,
+    "macro_f1": 0.9609,
     "per_class_recall": {
       "Anthracnose": 1.0,
       "Bacterial_Blight": 1.0,
       "Citrus_Canker": 1.0,
-      "Curl_Virus": 0.7647,
-      "Deficiency_Leaf": 0.931,
+      "Curl_Virus": 0.9412,
+      "Deficiency_Leaf": 0.8966,
       "Dry_Leaf": 1.0,
       "Healthy_Leaf": 1.0,
       "Sooty_Mould": 0.8261,
-      "Spider_Mites": 0.8824
+      "Spider_Mites": 1.0
     },
     "confusion_matrix": [
       [
@@ -75,24 +75,24 @@
         0
       ],
       [
+        1,
         0,
         0,
-        2,
-        13,
+        16,
         0,
         0,
-        2,
+        0,
         0,
         0
       ],
       [
         0,
         0,
+        2,
         1,
+        26,
         0,
-        27,
         0,
-        1,
         0,
         0
       ],
@@ -120,28 +120,28 @@
       ],
       [
         0,
+        1,
         0,
         0,
         0,
         0,
-        0,
-        4,
+        3,
         19,
         0
       ],
       [
         0,
         0,
-        2,
         0,
         0,
         0,
         0,
         0,
-        15
+        0,
+        17
       ]
     ],
-    "clean_test_low_confidence_pct": 1.96
+    "clean_test_low_confidence_pct": 1.47
   },
   "dataset_lineage": {
     "dataset_name": "Lemon Leaf Disease Classification",
@@ -190,7 +190,8 @@
     "processed_dir_sha256": "de9e6aae1591644ac14a7f50e27a003eb3fec5f37318a40d3058b86b67452630"
   },
   "artifacts": {
-    "weights_pt_sha256": "30479f024b88a92801725bcb545fc24359f714b9e078f4645fb15fd06712bcf4",
-    "torchscript_sha256": "d9dee6f0d481d8f53bfa52460dfd0811cd228b5cc443b157783d6db098a9df21"
-  }
+    "weights_pt_sha256": "3720e6e651e5b54907d5a6807bf86fd439906cfac2658f17516982020d901220",
+    "torchscript_sha256": "615c0b819a044762f6c0c6483e75ba6685e7d05374234f217a802738f884b000"
+  },
+  "mlflow_run_id": "ca88d3c3331d4aca8f1f9d1a5c9eeb47"
 }
