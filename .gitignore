@@ -24,3 +24,4 @@ mlflow.db
 reports/repro/
 data/_local_blob/
 data_demo_*/
+failure_photos/

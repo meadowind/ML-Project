@@ -110,6 +110,11 @@ Run a batch by hand: `make demo-upload FILES="…"` then `make run-batch`.
 The production model is registered in **Vertex AI Model Registry** through the same adapter layer
 (`GcpAdapter.register_model`), with its lineage as labels and, in full, in the version description:
 git commit, processed-data hash, MLflow run id, digest-pinned serving image, seed and metrics.
+**How the batch job pins its model:** the scheduled job runs a container image that contains exactly
+this model (`models/registry/lemon_classifier_v2/`), and the image is pinned by commit tag and digest,
+so a batch is replayable against the same model and code. The registry holds the same model with its
+lineage, and `make reload-check` proves it can be pulled back by version and used. We chose the image
+as the runtime source so that the container stays free of cloud credentials and SDKs.
 ```bash
 make image-push                       # or take the digest from the CI build of main
 make register-model IMAGE_REF=<registry>/lemon-batch@sha256:...
@@ -131,11 +136,9 @@ repository; `infra/setup_gcp.sh` grants both. The registered model carries the c
 Pull-request runs have no cloud access. OIDC is restricted to this repository's `main` branch.
 Kill switch: set the repository variable `BATCH_ENABLED=false`.
 Manual run options: replay everything, or turn the non-leaf guard off (see below).
-
 **CI blocks a bad commit.** To show the tests can actually fail, a deliberately broken commit (blur
 cutoff set to 0, so blurry photos would be scored) was pushed in a pull request that was never
-merged: [PR #14](https://github.com/meadowind/ML-Project/pull/14). Two tests fail
-(`test_status_per_fixture[blurred_leaf.jpg-REJECTED_BLURRED]` and
+merged: 6b92682. Two tests fail (`test_status_per_fixture[blurred_leaf.jpg-REJECTED_BLURRED]` and
 `test_bad_batch_never_crashes_and_good_files_still_scored`), and the `build` and publish steps do not
 run, so nothing broken reaches the registry.
 
@@ -145,14 +148,6 @@ Inputs already produced for it: `summary/<batch>.json` (`rejected_rate`, `low_co
 `files_total`, `duration_seconds`) and `logs/<batch>.jsonl`.
 
 ## The failure we designed for
-A softmax classifier always picks a class, so a photo of something that is **not a leaf** still
-gets a confident disease label. The `InputValidator` screens such photos out before the model.
-
-```bash
-make image
-bash infra/failure_demo.sh path/to/folder_of_non_leaf_photos
-```
-This scores the same photos with the guard off, then on, and prints both side by side.
 Regression tests: `tests/test_batch.py` (`test_non_leaf_scores_confidently_without_guard…`,
 `test_ood_guard_is_on_by_default…`) and `tests/test_failure_regression.py`, which uses real photos
 from this demo (`tests/failure_cases/`): paper and glass must be rejected, and the brick wall, which
@@ -161,8 +156,15 @@ day the guard starts catching it. On GitHub: Actions → batch → Run workflow 
 unticked.
 
 **What it revealed / what we changed:**
-
-We scored 8 photos that are not lemon leaves (paper, glass, hand, keyboard, brick wall, and photos of other plants). With the guard off, every photo got a disease label, five of them with confidence ≥ 0.90 (a brick wall as Dry_Leaf at 1.00, a keyboard as Anthracnose at 0.93): a softmax classifier always picks a class, so confidence says nothing about whether the input is a leaf. With the guard on, 2 of 8 were rejected (REJECTED_OOD_NON_LEAF); 6 still passed. The guard is a colour check that accepts foliage green, necrotic brown and soot black on purpose, so that real Dry_Leaf and Sooty_Mould leaves are not rejected (0.00% false rejects on the clean data). The cost is that brown or dark non-leaves and other plants can pass. We kept the guard, kept it on by default, and documented the limit instead of tuning thresholds on 8 photos. The proper fix is a learned "not a leaf" check (an extra class or one-class detector trained on non-leaf images); it is not done here. The photos that slipped through had plant-colour ratios of 0.10–0.99, overlapping or exceeding the range of real leaves we scored (0.27–0.62), so no single threshold separates them without rejecting real leaves.
+```bash
+make image
+bash infra/failure_demo.sh path/to/folder_of_non_leaf_photos
+```
+This scores the same photos with the guard off, then on, and prints both side by side.
+Regression tests: `tests/test_batch.py` (`test_non_leaf_scores_confidently_without_guard…`,
+`test_ood_guard_is_on_by_default…`). On GitHub: Actions → batch → Run workflow with
+`enable_ood_check` unticked.
+What it revealed / what we changed: We scored 8 photos that are not lemon leaves (paper, glass, hand, keyboard, brick wall, and photos of other plants). With the guard off, every photo got a disease label, five of them with confidence ≥ 0.90 (a brick wall as Dry_Leaf at 1.00, a keyboard as Anthracnose at 0.93): a softmax classifier always picks a class, so confidence says nothing about whether the input is a leaf. With the guard on, 2 of 8 were rejected (REJECTED_OOD_NON_LEAF); 6 still passed. The guard is a colour check that accepts foliage green, necrotic brown and soot black on purpose, so that real Dry_Leaf and Sooty_Mould leaves are not rejected (0.00% false rejects on the clean data). The cost is that brown or dark non-leaves and other plants can pass. We kept the guard, kept it on by default, and documented the limit instead of tuning thresholds on 8 photos. The proper fix is a learned "not a leaf" check (an extra class or one-class detector trained on non-leaf images); it is not done here. The photos that slipped through had plant-colour ratios of 0.10–0.99, overlapping or exceeding the range of real leaves we scored (0.27–0.62), so no single threshold separates them without rejecting real leaves.
 
 ## Cost per 1,000 predictions
 TODO: measured numbers. Cost components: scoring time on the runner, storage and operations

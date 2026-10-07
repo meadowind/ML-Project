@@ -160,3 +160,35 @@ def test_non_leaf_scores_confidently_without_guard_but_is_quarantined_with_it(di
     guarded = batch.Components(InputValidator().validate_file, overconfident, "t", {})
     s = go(dirs, guarded, batch_id="on")
     assert s["files_scored"] == 0 and s["by_status"] == {"REJECTED_OOD_NON_LEAF": 1}  # the fix
+
+
+def test_summary_names_rejected_samples_and_has_confidence_histogram(dirs, put, comp):
+    put("good_leaf.jpg", "corrupt.jpg", "empty.jpg", "blurred_leaf.jpg",
+        "not_a_leaf.jpg", "tiny.jpg")
+    s = go(dirs, comp, batch_id="h1")
+    samples = s["rejected_samples"]
+    assert [x["filename"] for x in samples] == sorted(x["filename"] for x in samples)
+    assert {x["filename"] for x in samples} >= {"corrupt.jpg", "empty.jpg", "not_a_leaf.jpg"}
+    assert all(x["status"].startswith("REJECTED") for x in samples)
+    assert len(samples) <= batch.REJECTED_SAMPLE_LIMIT
+    hist = s["confidence_histogram"]
+    assert len(hist) == batch.HISTOGRAM_BINS and sum(hist.values()) == s["files_scored"]
+    assert hist["0.9-1.0"] == s["files_scored"]            # the fake classifier answers 0.91
+
+
+def test_rejected_samples_are_capped(dirs, put, comp):
+    for i in range(8):
+        put("corrupt.jpg", as_name=f"bad{i}.jpg")
+    s = go(dirs, comp, batch_id="h2")
+    assert s["files_rejected"] == 8 and len(s["rejected_samples"]) == batch.REJECTED_SAMPLE_LIMIT
+
+
+def test_confidence_histogram_edges():
+    h = batch.confidence_histogram([0.0, 0.05, 0.6, 0.99, 1.0])
+    assert h["0.0-0.1"] == 2 and h["0.6-0.7"] == 1 and h["0.9-1.0"] == 2 and sum(h.values()) == 5
+
+
+def test_summary_with_no_scored_files_has_empty_histogram(dirs, put, comp):
+    put("corrupt.jpg")
+    s = go(dirs, comp, batch_id="h3")
+    assert sum(s["confidence_histogram"].values()) == 0 and s["files_scored"] == 0
