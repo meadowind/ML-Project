@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data" / "processed"
-MODEL_REGISTRY_DIR = PROJECT_ROOT / "models" / "registry" / "lemon_classifier_v2"
+MODEL_REGISTRY_DIR = Path(os.environ.get("MODEL_OUT_DIR", PROJECT_ROOT / "models" / "registry" / "lemon_classifier_v2"))
 
 SEED = 42
 BATCH_SIZE = 32
@@ -49,7 +49,7 @@ def sha256_file(filepath: Path) -> str:
 
 def get_git_commit() -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=PROJECT_ROOT).strip()
     except Exception:
         return "uncommitted"
 
