@@ -15,7 +15,7 @@ train:
 test:
 	pytest -q tests/
 lint:
-	ruff check src/ scripts/ tests/
+	ruff check src/ cloudlayer/ scripts/ tests/
 portability-audit:
 	python scripts/portability_audit.py
 scan-secrets:
@@ -31,3 +31,5 @@ lock:
 	  --extra-index-url https://pypi.org/simple \
 	  --index-strategy unsafe-best-match \
 	  -o requirements-runtime.lock
+
+include make/batch.mk

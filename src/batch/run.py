@@ -30,10 +30,10 @@ import os
 import shutil
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Optional
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 HEALTHY_CLASS = "Healthy_Leaf"
@@ -66,7 +66,7 @@ def new_batch_id() -> str:
 class EventLog:
     """JSON-lines log to stdout and to a file, always carrying the batch id."""
 
-    def __init__(self, batch_id: str, path: Optional[Path]) -> None:
+    def __init__(self, batch_id: str, path: Path | None) -> None:
         self.batch_id = batch_id
         self.path = path
         if path is not None:
@@ -143,7 +143,7 @@ def process_file(path: Path, comp: Components, batch_id: str, archive: Path,
                     model_version=comp.model_version, rejection_reason=reason)
 
 
-def _r(value) -> Optional[float]:
+def _r(value) -> float | None:
     return None if value is None else round(float(value), 3)
 
 
@@ -174,8 +174,8 @@ def summarise(rows: list[dict], batch_id: str, model_version: str, duration_s: f
 
 
 def run_batch(intake: Path, archive: Path, quarantine: Path, output: Path,
-              load_components: Callable[[], Components], batch_id: Optional[str] = None,
-              reprocess: bool = False) -> Optional[dict]:
+              load_components: Callable[[], Components], batch_id: str | None = None,
+              reprocess: bool = False) -> dict | None:
     """Returns the summary dict, or None when there was nothing new to do."""
     batch_id = batch_id or new_batch_id()
     log = EventLog(batch_id, output / "logs" / f"{batch_id}.jsonl")
@@ -240,7 +240,7 @@ def default_components(model_dir: Path) -> Components:
     )
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     data = Path(os.environ.get("DATA_DIR", "data"))
     p.add_argument("--intake", type=Path, default=data / "intake")

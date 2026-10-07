@@ -76,7 +76,7 @@ def main() -> int:
         "--no-banner",
         "-v",
     ]
-    result = subprocess.run(cmd)
+    result = subprocess.run(cmd, check=False)
 
     # gitleaks exit codes: 0 = clean, 1 = leaks found, anything else = tool error.
     if result.returncode == 0:

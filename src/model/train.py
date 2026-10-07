@@ -7,17 +7,17 @@ import logging
 import os
 import random
 import subprocess
+import sys
 import time
 from pathlib import Path
+
 import numpy as np
-from sklearn.metrics import confusion_matrix, f1_score, recall_score
 import torch
-import torch.nn as nn
+from sklearn.metrics import confusion_matrix, f1_score, recall_score
+from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
-import sys
 
-from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -50,7 +50,7 @@ def sha256_file(filepath: Path) -> str:
 def get_git_commit() -> str:
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=PROJECT_ROOT).strip()
-    except Exception:
+    except (subprocess.SubprocessError, OSError):
         return "uncommitted"
 
 def train_v2():
@@ -87,7 +87,6 @@ def train_v2():
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
     best_val_acc = 0.0
-    start_time = time.time()
 
     for epoch in range(NUM_EPOCHS):
         model.train()

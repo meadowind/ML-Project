@@ -11,10 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from make_fixtures import make  # noqa: E402
+from make_fixtures import make
 
-from src.batch.run import Components  # noqa: E402
-from src.model.validator import InputValidator  # noqa: E402
+from src.batch.run import Components
+from src.model.validator import InputValidator
 
 
 @pytest.fixture(scope="session")

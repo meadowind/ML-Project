@@ -4,18 +4,19 @@ Input validation and out-of-distribution (OOD) screening filter.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+
 import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
+
 
 @dataclass
 class ValidationResult:
     is_valid: bool
     status: str
-    rejection_reason: Optional[str] = None
-    blur_score: Optional[float] = None
-    foliage_ratio: Optional[float] = None
+    rejection_reason: str | None = None
+    blur_score: float | None = None
+    foliage_ratio: float | None = None
 
 class InputValidator:
     def __init__(
@@ -31,7 +32,7 @@ class InputValidator:
         self.enable_ood_check = enable_ood_check
         self.analysis_dim = (256, 256)
 
-    def validate_file(self, file_path: Path) -> Tuple[ValidationResult, Optional[Image.Image]]:
+    def validate_file(self, file_path: Path) -> tuple[ValidationResult, Image.Image | None]:
         if not file_path.exists() or file_path.stat().st_size == 0:
             return ValidationResult(False, "REJECTED_CORRUPTED", "Empty or non-existent file"), None
 

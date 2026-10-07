@@ -3,9 +3,9 @@ Shared inference utility for batch inference and testing.
 """
 import json
 from pathlib import Path
-from typing import List, Tuple
-from PIL import Image
+
 import torch
+from PIL import Image
 from torchvision import transforms
 
 TRANSFORM = transforms.Compose([
@@ -14,7 +14,7 @@ TRANSFORM = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-def load_model(registry_dir: Path) -> Tuple[torch.jit.ScriptModule, List[str], dict]:
+def load_model(registry_dir: Path) -> tuple[torch.jit.ScriptModule, list[str], dict]:
     model_path = registry_dir / "model.torchscript.pt"
     manifest_path = registry_dir / "model_manifest.json"
 
@@ -28,7 +28,7 @@ def load_model(registry_dir: Path) -> Tuple[torch.jit.ScriptModule, List[str], d
     model.eval()
     return model, manifest["classes"], manifest
 
-def predict(image: Image.Image, model: torch.jit.ScriptModule, classes: List[str]) -> Tuple[str, float]:
+def predict(image: Image.Image, model: torch.jit.ScriptModule, classes: list[str]) -> tuple[str, float]:
     tensor = TRANSFORM(image.convert("RGB")).unsqueeze(0)
     with torch.no_grad():
         logits = model(tensor)
