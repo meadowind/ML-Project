@@ -85,6 +85,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install fixture-generator dependencies (same pins as requirements.txt)
+        run: pip install numpy==2.1.2 pillow==11.1.0
+
       - name: Integration test — real model, real validator, bad batch
         run: |
           python scripts/make_fixtures.py tests/fixtures
