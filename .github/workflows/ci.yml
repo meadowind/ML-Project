@@ -1,0 +1,126 @@
+# CI: cheap, can-fail checks first. PR runs never touch the cloud (no credentials needed).
+# Only a push to main publishes the image, using short-lived OIDC credentials.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GITLEAKS_VERSION: "8.18.4"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # scan_secrets.py refuses to run on a shallow clone
+
+      - name: Install gitleaks (pinned)
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Secret scan (full history)
+        run: make scan-secrets
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements-runtime.lock
+            requirements-dev.txt
+
+      - name: Install (hash-checked runtime lock + dev tools)
+        run: |
+          pip install --require-hashes \
+            --index-url https://download.pytorch.org/whl/cpu \
+            --extra-index-url https://pypi.org/simple \
+            -r requirements-runtime.lock
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: make lint
+
+      - name: Portability audit
+        run: make portability-audit
+
+      - name: Tests
+        run: make test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write            # OIDC; only used on push to main
+    env:
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      WIF_PROVIDER: projects/681718552150/locations/global/workloadIdentityPools/lemon-gh-pool/providers/github
+      PUBLISHER_SA: lemon-publisher@lemon-mlops-project.iam.gserviceaccount.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Compute short SHA
+        run: echo "SHORT=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Build image (digest-pinned base, hash-locked deps)
+        run: make image TAG="$SHORT" GIT_COMMIT="$GITHUB_SHA"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install fixture-generator dependencies (same pins as requirements.txt)
+        run: pip install numpy==2.1.2 pillow==11.1.0
+
+      - name: Integration test — real model, real validator, bad batch
+        run: |
+          python scripts/make_fixtures.py tests/fixtures
+          mkdir -p data/intake
+          cp tests/fixtures/{good_leaf,corrupt,blurred_leaf,not_a_leaf}.jpg data/intake/
+          make run-batch-local TAG="$SHORT" BATCH_ID="ci-$SHORT"
+          python - <<'PY'
+          import json, os, sys
+          s = json.load(open(f"data/output/summary/ci-{os.environ['SHORT']}.json"))
+          print(s)
+          assert s["files_total"] == 4, s
+          assert s["files_scored"] == 1, s          # only the good leaf is scored
+          assert s["files_rejected"] == 3, s        # corrupt, blurred, non-leaf quarantined
+          assert s["model_version"].startswith("v"), s
+          PY
+          # second run must find nothing new and must not load the model
+          make run-batch-local TAG="$SHORT" BATCH_ID="ci-$SHORT-again" | tee second.log
+          grep -q batch_skipped second.log
+
+      - name: Authenticate to Google Cloud (main only)
+        if: env.PUBLISH == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.PUBLISHER_SA }}
+
+      - name: Set up gcloud (main only)
+        if: env.PUBLISH == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Push image, print digest (main only)
+        if: env.PUBLISH == 'true'
+        run: |
+          cp cloud.env.ci cloud.env
+          make image-push TAG="$SHORT" | tee push.log
+          echo "Pushed: $(tail -n 1 push.log)" >> "$GITHUB_STEP_SUMMARY"

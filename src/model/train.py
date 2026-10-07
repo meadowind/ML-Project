@@ -1,23 +1,24 @@
 """
 Reproducible training and artifact export for lemon_classifier_v2.
 """
+import contextlib
 import hashlib
 import json
 import logging
 import os
 import random
 import subprocess
+import sys
 import time
 from pathlib import Path
+
 import numpy as np
-from sklearn.metrics import confusion_matrix, f1_score, recall_score
 import torch
-import torch.nn as nn
+from sklearn.metrics import confusion_matrix, f1_score, recall_score
+from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
-import sys
 
-from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data" / "processed"
-MODEL_REGISTRY_DIR = PROJECT_ROOT / "models" / "registry" / "lemon_classifier_v2"
+MODEL_REGISTRY_DIR = Path(os.environ.get("MODEL_OUT_DIR", PROJECT_ROOT / "models" / "registry" / "lemon_classifier_v2"))
 
 SEED = 42
 BATCH_SIZE = 32
@@ -49,9 +50,55 @@ def sha256_file(filepath: Path) -> str:
 
 def get_git_commit() -> str:
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-    except Exception:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=PROJECT_ROOT).strip()
+    except (subprocess.SubprocessError, OSError):
         return "uncommitted"
+
+@contextlib.contextmanager
+def _mlflow_run(manifest: dict, registry_dir: Path):
+    """Track this run in MLflow and register the resulting model version.
+
+    Yields the run id so the caller can store it in the manifest before the manifest file
+    is written. Backend/registry names come from cloud.env via src.config (sqlite locally).
+    """
+    import mlflow
+    from mlflow import MlflowClient
+    from mlflow.exceptions import MlflowException
+
+    from src import config
+
+    cfg = config.load(strict=False)
+    mlflow.set_tracking_uri(cfg.mlflow_tracking_uri)
+    mlflow.set_experiment(cfg.model_registry_name)
+    lineage = manifest["dataset_lineage"]
+    with mlflow.start_run(run_name=manifest["version"]) as run:
+        mlflow.log_params({
+            **manifest["hyperparameters"],
+            "git_commit": manifest["git_commit"],
+            "dataset_revision": lineage["revision_pinned"],
+            "dataset_sha256": lineage["processed_dir_sha256"],
+            "torch_version": manifest["framework_versions"]["torch"],
+        })
+        mlflow.log_metrics({k: v for k, v in manifest["metrics"].items() if isinstance(v, float)})
+        yield run.info.run_id
+
+        # the manifest file now exists on disk; store everything with the run
+        mlflow.log_artifacts(str(registry_dir), artifact_path="model")
+        client = MlflowClient()
+        try:
+            client.get_registered_model(cfg.model_registry_name)
+        except MlflowException:
+            client.create_registered_model(cfg.model_registry_name)
+        version = client.create_model_version(
+            cfg.model_registry_name,
+            source=f"{run.info.artifact_uri}/model",
+            run_id=run.info.run_id,
+            tags={"git_commit": manifest["git_commit"], "model_version": manifest["version"]},
+        )
+        client.set_registered_model_alias(cfg.model_registry_name, "candidate", version.version)
+        logger.info("MLflow run %s, registered %s v%s", run.info.run_id,
+                    cfg.model_registry_name, version.version)
+
 
 def train_v2():
     seed_everything(SEED)
@@ -87,7 +134,6 @@ def train_v2():
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 
     best_val_acc = 0.0
-    start_time = time.time()
 
     for epoch in range(NUM_EPOCHS):
         model.train()
@@ -170,8 +216,10 @@ def train_v2():
         },
     }
 
-    with open(MODEL_REGISTRY_DIR / "model_manifest.json", "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
+    with _mlflow_run(manifest, MODEL_REGISTRY_DIR) as run_id:
+        manifest["mlflow_run_id"] = run_id
+        with open(MODEL_REGISTRY_DIR / "model_manifest.json", "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2)
 
     logger.info("v2 model registered at %s", MODEL_REGISTRY_DIR)
 

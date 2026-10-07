@@ -1,0 +1,95 @@
+# Scheduled batch scoring. Every 30 minutes: look for new photos in object storage;
+# only if there are some, pull the image and score them. Idle runs cost no image egress.
+#
+# Kill switch: set the repository variable BATCH_ENABLED=false (Settings > Variables).
+# Manual run: Actions > batch > Run workflow (can replay, or turn the OOD check off for
+# the deliberate-failure demo).
+name: batch
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      reprocess:
+        description: "Replay everything in intake/ (ignore archive/quarantine)"
+        type: boolean
+        default: false
+      enable_ood_check:
+        description: "Non-leaf screening ON (turn off only for the failure demo)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: batch              # never two batches at once
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  score:
+    if: vars.BATCH_ENABLED != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      WIF_PROVIDER: projects/681718552150/locations/global/workloadIdentityPools/lemon-gh-pool/providers/github
+      BATCH_SA: lemon-batch@lemon-mlops-project.iam.gserviceaccount.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install storage client only
+        run: pip install google-cloud-storage
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.BATCH_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Load non-secret cloud config
+        run: cp cloud.env.ci cloud.env
+
+      - name: Pull new photos
+        id: pull
+        run: |
+          if [ "${{ inputs.reprocess }}" = "true" ]; then python scripts/sync_down.py --reprocess; else python scripts/sync_down.py; fi
+          n=$(find data/intake -type f 2>/dev/null | wc -l | tr -d ' ')
+          echo "new=$n" >> "$GITHUB_OUTPUT"
+          echo "New photos: $n" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Pull image
+        if: steps.pull.outputs.new != '0'
+        run: |
+          SHORT=${GITHUB_SHA::7}
+          set -a; . ./cloud.env; set +a
+          REMOTE="${CONTAINER_REGISTRY}/lemon-batch:${SHORT}"
+          gcloud auth configure-docker "${CONTAINER_REGISTRY%%/*}" --quiet
+          docker pull --platform linux/amd64 "$REMOTE"
+          docker tag "$REMOTE" "lemon-batch:${SHORT}"
+          echo "SHORT=$SHORT" >> "$GITHUB_ENV"
+
+      - name: Score
+        if: steps.pull.outputs.new != '0'
+        run: |
+          ARGS=""
+          if [ "${{ inputs.reprocess }}" = "true" ]; then ARGS="--reprocess"; fi
+          ENABLE_OOD_CHECK="${{ inputs.enable_ood_check }}"
+          [ -z "$ENABLE_OOD_CHECK" ] && ENABLE_OOD_CHECK=true
+          make run-batch-local TAG="$SHORT" ENABLE_OOD_CHECK="$ENABLE_OOD_CHECK" ARGS="$ARGS"
+
+      - name: Push results
+        if: steps.pull.outputs.new != '0'
+        run: |
+          python scripts/sync_up.py
+          for f in data/output/summary/*.json; do
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"; cat "$f" >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done

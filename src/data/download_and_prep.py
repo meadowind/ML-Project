@@ -8,6 +8,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
+
 from datasets import load_dataset
 from PIL import Image
 from sklearn.model_selection import train_test_split
@@ -47,7 +48,7 @@ def download_and_prep_stratified():
 
     all_images = []
     all_labels = []
-    for split_key in raw_dataset.keys():
+    for split_key in raw_dataset:
         for record in raw_dataset[split_key]:
             all_images.append(record["image"])
             all_labels.append(EXPECTED_CLASSES[record["label"]])
