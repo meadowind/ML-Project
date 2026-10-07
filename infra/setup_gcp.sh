@@ -26,7 +26,7 @@ gcloud projects describe "$PROJECT_ID" >/dev/null 2>&1 \
 gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT"
 
 gcloud services enable storage.googleapis.com artifactregistry.googleapis.com \
-  billingbudgets.googleapis.com iam.googleapis.com --project "$PROJECT_ID"
+  billingbudgets.googleapis.com iam.googleapis.com aiplatform.googleapis.com --project "$PROJECT_ID"
 
 gcloud storage buckets describe "gs://${BUCKET}" >/dev/null 2>&1 \
   || gcloud storage buckets create "gs://${BUCKET}" --project "$PROJECT_ID" \
@@ -39,6 +39,17 @@ gcloud artifacts repositories describe "$AR_REPO" --project "$PROJECT_ID" --loca
 
 gcloud iam service-accounts describe "lemon-batch@${PROJECT_ID}.iam.gserviceaccount.com" --project "$PROJECT_ID" >/dev/null 2>&1 \
   || gcloud iam service-accounts create lemon-batch --project "$PROJECT_ID" --display-name="lemon batch scorer"
+
+# The Vertex AI service agent is created the first time the API is enabled. If these bindings
+# fail because the account is not found yet, wait a moment and run the script again.
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+# Vertex AI reads the model files from the bucket when a model is registered.
+gcloud storage buckets add-iam-policy-binding "gs://${BUCKET}" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-aiplatform.iam.gserviceaccount.com" \
+  --role=roles/storage.objectViewer
+gcloud artifacts repositories add-iam-policy-binding "$AR_REPO" --project "$PROJECT_ID" --location "$REGION" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-aiplatform.iam.gserviceaccount.com" \
+  --role=roles/artifactregistry.reader
 
 # Budget alert. EXCLUDE credits so the alert fires on real spend, not on what credits cover.
 gcloud billing budgets create --billing-account="$BILLING_ACCOUNT" --billing-project="$PROJECT_ID" \

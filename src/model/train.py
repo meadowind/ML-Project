@@ -54,6 +54,12 @@ def get_git_commit() -> str:
     except (subprocess.SubprocessError, OSError):
         return "uncommitted"
 
+def _set_experiment(mlflow, name, cfg):
+    """Keep MLflow artifacts in the bucket (not the laptop) when a cloud provider is configured."""
+    if cfg.provider != "local" and cfg.blob_uri and mlflow.get_experiment_by_name(name) is None:
+        mlflow.create_experiment(name, artifact_location=f"{cfg.blob_uri}/mlruns")
+    mlflow.set_experiment(name)
+
 @contextlib.contextmanager
 def _mlflow_run(manifest: dict, registry_dir: Path):
     """Track this run in MLflow and register the resulting model version.
@@ -69,7 +75,7 @@ def _mlflow_run(manifest: dict, registry_dir: Path):
 
     cfg = config.load(strict=False)
     mlflow.set_tracking_uri(cfg.mlflow_tracking_uri)
-    mlflow.set_experiment(cfg.model_registry_name)
+    _set_experiment(mlflow, cfg.model_registry_name, cfg)
     lineage = manifest["dataset_lineage"]
     with mlflow.start_run(run_name=manifest["version"]) as run:
         mlflow.log_params({
