@@ -4,7 +4,7 @@
 PYTHON ?= python
 DATA    ?= $(CURDIR)/data
 
-.PHONY: cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan
+.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan
 
 cloud-check:
 	$(PYTHON) scripts/cloud_check.py
@@ -42,4 +42,15 @@ teardown:
 # What `make teardown` WOULD delete (resources carrying the capstone labels). Run this first.
 teardown-plan:
 	gcloud storage buckets list --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
-	gcloud artifacts repositories list --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
+	gcloud artifacts repositories list --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
+	gcloud ai models list --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
+
+# Register the production model (needs the digest-pinned image printed by `make image-push` / CI).
+#   make register-model IMAGE_REF=asia-southeast1-docker.pkg.dev/<proj>/lemon/lemon-batch@sha256:...
+register-model:
+	@test -n "$(IMAGE_REF)" || { echo "Set IMAGE_REF=<digest-pinned image>"; exit 1; }
+	$(PYTHON) scripts/register_model.py --image "$(IMAGE_REF)"
+
+# Pull the model back from the registry (REF=name@version, default latest) and score 5 held-out images.
+reload-check:
+	$(PYTHON) scripts/reload_check.py $(if $(REF),--ref $(REF),)

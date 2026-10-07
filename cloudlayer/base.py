@@ -53,8 +53,16 @@ class CloudAdapter(ABC):
     def wait_training(self, job_id: str) -> dict[str, Any]:
         raise NotImplementedError("Lab 2")
 
-    def register_model(self, model_uri: str, name: str) -> str:
+    def register_model(self, model_uri: str, name: str, lineage: dict[str, str] | None = None) -> str:
+        """Register the artifacts under `model_uri` as a new version of `name`; returns a
+        version reference. `lineage` (git commit, data version, run id, image, seed, metrics)
+        must travel with the version."""
         raise NotImplementedError("Lab 2")
+
+    def fetch_model(self, model_ref: str, local_dir: str) -> dict[str, str]:
+        """Download a registered version's artifacts into `local_dir`; return its lineage.
+        `model_ref` is what register_model returned, or a bare name (= the `candidate` version)."""
+        raise NotImplementedError("capstone")
 
     # --- Lab 3 ---------------------------------------------------------------
     def deploy(self, model_ref: str, endpoint: str, instance: str) -> str:
@@ -135,3 +143,27 @@ class LocalAdapter(CloudAdapter):
         from pathlib import Path
 
         return f"local://{Path(self.cfg.data_dir) / '_local_blob' / key}"
+
+    def register_model(self, model_uri: str, name: str, lineage: dict[str, str] | None = None) -> str:
+        import json
+        import shutil
+        from pathlib import Path
+
+        root = Path(self.cfg.data_dir) / "_local_blob" / "_registry" / name
+        root.mkdir(parents=True, exist_ok=True)
+        version = len([p for p in root.iterdir() if p.is_dir()]) + 1
+        dest = root / str(version)
+        shutil.copytree(model_uri.removeprefix("local://"), dest / "files")
+        (dest / "lineage.json").write_text(json.dumps(lineage or {}), encoding="utf-8")
+        return f"{name}@{version}"
+
+    def fetch_model(self, model_ref: str, local_dir: str) -> dict[str, str]:
+        import json
+        import shutil
+        from pathlib import Path
+
+        name, _, version = model_ref.partition("@")
+        base = Path(self.cfg.data_dir) / "_local_blob" / "_registry" / name
+        version = version or str(max(int(p.name) for p in base.iterdir() if p.is_dir()))
+        shutil.copytree(base / version / "files", local_dir, dirs_exist_ok=True)
+        return json.loads((base / version / "lineage.json").read_text(encoding="utf-8"))

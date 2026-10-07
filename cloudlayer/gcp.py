@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
@@ -18,6 +19,13 @@ from urllib.parse import urlparse
 from cloudlayer.base import CloudAdapter
 
 log = logging.getLogger(__name__)
+
+_LABEL_BAD = re.compile(r"[^a-z0-9_-]")
+
+
+def _label_value(value: object) -> str:
+    """GCP label values: lowercase letters, digits, '_' and '-', at most 63 chars."""
+    return _LABEL_BAD.sub("_", str(value).lower())[:63]
 
 
 def _storage():
@@ -82,6 +90,72 @@ class GcpAdapter(CloudAdapter):
         )
         return out.stdout.strip().strip("'\"")
 
+
+    # --- model registry (Vertex AI Model Registry) -----------------------------
+    def _aiplatform(self):
+        from google.cloud import (
+            aiplatform,  # lazy: only training/registry machines need it
+        )
+
+        aiplatform.init(project=self.cfg.project_id, location=self.cfg.region)
+        return aiplatform
+
+    def register_model(self, model_uri: str, name: str, lineage: dict[str, str] | None = None) -> str:
+        """Register the artifacts under `model_uri` as a new version of model `name`.
+
+        Lineage goes into labels (shortened to GCP's label rules) and, in full, into the
+        version description as JSON. `lineage["image_uri"]` (digest-pinned) is required: the
+        registry wants a serving image, and ours is the image that actually runs the model.
+        """
+        lineage = dict(lineage or {})
+        image = lineage.get("image_uri")
+        if not image:
+            raise ValueError("lineage['image_uri'] (digest-pinned image reference) is required")
+        aiplatform = self._aiplatform()
+        labels = {**self.cfg.tags("capstone"),
+                  **{k: _label_value(v) for k, v in lineage.items() if k != "image_uri"}}
+        description = json.dumps(lineage, sort_keys=True)
+        kwargs = {
+            "display_name": name,
+            "artifact_uri": model_uri,
+            "serving_container_image_uri": image,
+            "labels": labels,
+            "version_aliases": ["candidate"],
+        }
+        existing = aiplatform.Model.list(filter=f'display_name="{name}"')
+        if existing:
+            kwargs["parent_model"] = existing[0].resource_name
+            kwargs["version_description"] = description
+        else:
+            kwargs["description"] = description
+        model = aiplatform.Model.upload(**kwargs)
+        return f"{model.resource_name}@{model.version_id}"
+
+    def fetch_model(self, model_ref: str, local_dir: str) -> dict[str, str]:
+        """Download a registered version's artifacts and return its lineage.
+
+        `model_ref` is the string register_model returned, or just the model name
+        (meaning: the version aliased `candidate`).
+        """
+        aiplatform = self._aiplatform()
+        if not model_ref.startswith("projects/"):
+            found = aiplatform.Model.list(filter=f'display_name="{model_ref}"')
+            if not found:
+                raise LookupError(f"no model named {model_ref!r} in the registry")
+            model_ref = f"{found[0].resource_name}@candidate"
+        model = aiplatform.Model(model_name=model_ref)
+        parsed = urlparse(model.uri)
+        prefix = parsed.path.lstrip("/").rstrip("/") + "/"
+        for blob in self._client().list_blobs(parsed.netloc, prefix=prefix):
+            if blob.name.endswith("/"):
+                continue
+            dest = Path(local_dir) / blob.name[len(prefix):]
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            blob.download_to_filename(str(dest))
+        lineage = json.loads(model.version_description or model.description or "{}")
+        lineage["resolved_ref"] = model_ref
+        return lineage
+
     # --- teardown --------------------------------------------------------------
     def teardown(self, tags: dict[str, str]) -> list[str]:
         """Delete buckets and Artifact Registry repos whose labels include all of `tags`.
@@ -113,4 +187,13 @@ class GcpAdapter(CloudAdapter):
                     ["gcloud", "artifacts", "repositories", "delete", name, "--quiet",
                      f"--project={self.cfg.project_id}"], check=True)
                 deleted.append(name)
+
+        try:
+            aiplatform = self._aiplatform()
+            flt = " AND ".join(f'labels.{k}="{v}"' for k, v in tags.items())
+            for model in aiplatform.Model.list(filter=flt):
+                model.delete()
+                deleted.append(model.resource_name)
+        except ImportError:
+            log.warning("google-cloud-aiplatform not installed; registry models were not checked")
         return deleted
