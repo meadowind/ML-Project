@@ -8,7 +8,11 @@ data/output/
 data/archive/
 data/quarantine/
 .env
-
+cloud.env
+.DS_Store
+.pytest_cache/
+.ruff_cache/
+reports/gitleaks-report.json
 !models/registry/
 !models/registry/**
 !models/registry/**/*.pt
