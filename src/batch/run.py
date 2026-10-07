@@ -38,6 +38,8 @@ from pathlib import Path
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 HEALTHY_CLASS = "Healthy_Leaf"
 LOW_CONFIDENCE = 0.60
+REJECTED_SAMPLE_LIMIT = 5      # filenames named in the summary (for alert messages)
+HISTOGRAM_BINS = 10          # confidence histogram: 10 bins of width 0.1
 
 CSV_COLUMNS = [
     "batch_id", "filename", "status", "predicted_class", "confidence",
@@ -147,6 +149,16 @@ def _r(value) -> float | None:
     return None if value is None else round(float(value), 3)
 
 
+def confidence_histogram(confidences: list[float]) -> dict[str, int]:
+    """Counts per 0.1-wide bin, always all bins present; 1.0 falls in the last bin."""
+    width = 1 / HISTOGRAM_BINS
+    keys = [f"{i * width:.1f}-{(i + 1) * width:.1f}" for i in range(HISTOGRAM_BINS)]
+    hist = dict.fromkeys(keys, 0)
+    for c in confidences:
+        hist[keys[min(int(c * HISTOGRAM_BINS), HISTOGRAM_BINS - 1)]] += 1
+    return hist
+
+
 def summarise(rows: list[dict], batch_id: str, model_version: str, duration_s: float) -> dict:
     total = len(rows)
     scored = [r for r in rows if r["status"] == "SCORED"]
@@ -169,6 +181,11 @@ def summarise(rows: list[dict], batch_id: str, model_version: str, duration_s: f
         "low_confidence_rate": round(len(low) / len(scored), 4) if scored else 0.0,
         "needs_inspection_count": sum(1 for r in scored if r["needs_inspection"] == "true"),
         "by_status": by_status,
+        # Up to REJECTED_SAMPLE_LIMIT rejected files (sorted by name): examples for an alert.
+        "rejected_samples": [{"filename": r["filename"], "status": r["status"]}
+                             for r in sorted((r for r in rows if r["status"] != "SCORED"),
+                                             key=lambda r: r["filename"])[:REJECTED_SAMPLE_LIMIT]],
+        "confidence_histogram": confidence_histogram([float(r["confidence"]) for r in scored]),
         "duration_seconds": round(duration_s, 2),
     }
 
@@ -209,7 +226,8 @@ def run_batch(intake: Path, archive: Path, quarantine: Path, output: Path,
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     log.emit("batch_finished", **{k: v for k, v in summary.items()
-                                  if k not in ("batch_id", "by_status")})
+                                  if k not in ("batch_id", "by_status", "rejected_samples",
+                                               "confidence_histogram")})
     return summary
 
 
