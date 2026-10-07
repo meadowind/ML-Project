@@ -24,7 +24,7 @@ sync-up:
 run-batch-local:
 	docker run --rm --platform linux/amd64 --user "$$(id -u):$$(id -g)" -e HOME=/tmp \
 	  -e DATA_DIR=/data $(foreach v,BLUR_THRESHOLD FOLIAGE_THRESHOLD ENABLE_BLUR_CHECK ENABLE_OOD_CHECK BATCH_ID,$(if $($(v)),-e $(v)=$($(v)))) \
-	  -v "$(DATA):/data" $(IMAGE):$(TAG) python -m src.batch.run
+	  -v "$(DATA):/data" $(IMAGE):$(TAG) python -m src.batch.run $(ARGS)
 
 # The full scheduled cycle: pull new photos, score them, push results.
 run-batch: sync-down run-batch-local sync-up
