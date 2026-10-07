@@ -149,7 +149,7 @@ This scores the same photos with the guard off, then on, and prints both side by
 Regression tests: `tests/test_batch.py` (`test_non_leaf_scores_confidently_without_guard…`,
 `test_ood_guard_is_on_by_default…`). On GitHub: Actions → batch → Run workflow with
 `enable_ood_check` unticked.
-What it revealed / what we changed: TODO (fill in after the live run).
+What it revealed / what we changed: We scored 8 photos that are not lemon leaves (paper, glass, hand, keyboard, brick wall, and photos of other plants). With the guard off, every photo got a disease label, five of them with confidence ≥ 0.90 (a brick wall as Dry_Leaf at 1.00, a keyboard as Anthracnose at 0.93): a softmax classifier always picks a class, so confidence says nothing about whether the input is a leaf. With the guard on, 2 of 8 were rejected (REJECTED_OOD_NON_LEAF); 6 still passed. The guard is a colour check that accepts foliage green, necrotic brown and soot black on purpose, so that real Dry_Leaf and Sooty_Mould leaves are not rejected (0.00% false rejects on the clean data). The cost is that brown or dark non-leaves and other plants can pass. We kept the guard, kept it on by default, and documented the limit instead of tuning thresholds on 8 photos. The proper fix is a learned "not a leaf" check (an extra class or one-class detector trained on non-leaf images); it is not done here. The photos that slipped through had plant-colour ratios of 0.10–0.99, overlapping or exceeding the range of real leaves we scored (0.27–0.62), so no single threshold separates them without rejecting real leaves.
 
 ## Cost per 1,000 predictions
 TODO: measured numbers. Cost components: scoring time on the runner, storage and operations
