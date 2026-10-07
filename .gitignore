@@ -18,3 +18,9 @@ reports/gitleaks-report.json
 !models/registry/**/*.pt
 !models/registry/**/*.json
 tests/fixtures/
+mlruns/
+mlartifacts/
+mlflow.db
+reports/repro/
+data/_local_blob/
+data_demo_*/

@@ -101,7 +101,8 @@ class GcpAdapter(CloudAdapter):
 
         listing = subprocess.run(
             ["gcloud", "artifacts", "repositories", "list",
-             f"--project={self.cfg.project_id}", "--format=json"],
+             f"--project={self.cfg.project_id}", f"--location={self.cfg.region}",
+             "--format=json"],
             capture_output=True, text=True, check=True,
         )
         for repo in json.loads(listing.stdout or "[]"):

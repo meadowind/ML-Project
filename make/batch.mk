@@ -4,7 +4,7 @@
 PYTHON ?= python
 DATA    ?= $(CURDIR)/data
 
-.PHONY: cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown
+.PHONY: cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan
 
 cloud-check:
 	$(PYTHON) scripts/cloud_check.py
@@ -38,3 +38,8 @@ demo-upload:
 teardown:
 	@test "$(CONFIRM)" = "yes" || { echo "This DELETES the bucket and registry. Re-run: make teardown CONFIRM=yes"; exit 1; }
 	$(PYTHON) -c "from cloudlayer.factory import get_adapter; from src import config; c=config.load(); print('\n'.join(get_adapter(c).teardown(c.tags('capstone'))) or 'nothing found')"
+
+# What `make teardown` WOULD delete (resources carrying the capstone labels). Run this first.
+teardown-plan:
+	gcloud storage buckets list --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
+	gcloud artifacts repositories list --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"

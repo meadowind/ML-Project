@@ -123,3 +123,40 @@ def test_missing_model_makes_main_exit_nonzero(dirs, put, tmp_path):
                      "--quarantine", str(dirs["quarantine"]), "--output", str(dirs["output"]),
                      "--model-dir", str(tmp_path / "nope")])
     assert rc == 1
+
+
+def test_ood_guard_is_on_by_default_and_only_off_when_asked(monkeypatch):
+    """The deliberate-failure demo turns the guard off via env. It must never be off by default."""
+    monkeypatch.delenv("ENABLE_OOD_CHECK", raising=False)
+    assert batch._env_flag("ENABLE_OOD_CHECK", True) is True
+    monkeypatch.setenv("ENABLE_OOD_CHECK", "false")
+    assert batch._env_flag("ENABLE_OOD_CHECK", True) is False
+    monkeypatch.setenv("ENABLE_OOD_CHECK", "1")
+    assert batch._env_flag("ENABLE_OOD_CHECK", True) is True
+
+
+def test_non_leaf_scores_confidently_without_guard_but_is_quarantined_with_it(dirs, put):
+    """The failure we designed for, as a regression test.
+
+    Without the guard a classifier labels a non-leaf photo (softmax always picks something);
+    with the guard the same file never reaches the model.
+    """
+    from src.model.validator import InputValidator
+
+    put("not_a_leaf.jpg")
+
+    def overconfident(_img):  # stands in for softmax, which always picks a class
+        return "Anthracnose", 0.97
+
+    unguarded = batch.Components(InputValidator(enable_ood_check=False).validate_file,
+                                 overconfident, "t", {})
+    s = go(dirs, unguarded, batch_id="off")
+    assert s["files_scored"] == 1 and s["needs_inspection_count"] == 1   # the failure
+
+    for d in ("archive", "quarantine", "output"):
+        for p in dirs[d].rglob("*"):
+            if p.is_file():
+                p.unlink()
+    guarded = batch.Components(InputValidator().validate_file, overconfident, "t", {})
+    s = go(dirs, guarded, batch_id="on")
+    assert s["files_scored"] == 0 and s["by_status"] == {"REJECTED_OOD_NON_LEAF": 1}  # the fix
