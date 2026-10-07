@@ -17,3 +17,4 @@ reports/gitleaks-report.json
 !models/registry/**
 !models/registry/**/*.pt
 !models/registry/**/*.json
+tests/fixtures/
