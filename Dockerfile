@@ -15,6 +15,7 @@ RUN useradd --create-home --uid 10001 runner
 COPY --from=builder /install /usr/local
 WORKDIR /app
 COPY --chown=runner:runner src/model/ ./src/model/
+COPY --chown=runner:runner src/batch/ ./src/batch/
 COPY --chown=runner:runner models/registry/lemon_classifier_v2/model.torchscript.pt models/registry/lemon_classifier_v2/model_manifest.json ./models/registry/lemon_classifier_v2/
 USER runner
-CMD ["python", "-c", "import torch, cv2, PIL; print(torch.__version__, cv2.__version__)"]
+CMD ["python", "-m", "src.batch.run"]
