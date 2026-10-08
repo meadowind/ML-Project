@@ -22,6 +22,8 @@ from torchvision import datasets, models, transforms
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.model.provenance import git_commit_from_env, training_info
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,9 @@ def sha256_file(filepath: Path) -> str:
     return hasher.hexdigest()
 
 def get_git_commit() -> str:
+    from_image = git_commit_from_env()
+    if from_image:
+        return from_image
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, cwd=PROJECT_ROOT).strip()
     except (subprocess.SubprocessError, OSError):
@@ -84,6 +89,7 @@ def _mlflow_run(manifest: dict, registry_dir: Path):
             "dataset_revision": lineage["revision_pinned"],
             "dataset_sha256": lineage["processed_dir_sha256"],
             "torch_version": manifest["framework_versions"]["torch"],
+            **{f"training_{k}": v for k, v in manifest.get("training", {}).items()},
         })
         mlflow.log_metrics({k: v for k, v in manifest["metrics"].items() if isinstance(v, float)})
         yield run.info.run_id
@@ -207,6 +213,7 @@ def train_v2():
             "seed": SEED,
         },
         "classes": classes,
+        "training": training_info(),
         "metrics": {
             "best_val_accuracy": round(best_val_acc, 4),
             "test_accuracy": round(test_acc, 4),

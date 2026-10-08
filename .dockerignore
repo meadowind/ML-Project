@@ -1,7 +1,8 @@
 .git
 .venv
 .github
-data
+data/*
+!data/dataset_lineage.json
 reports
 tests
 **/__pycache__

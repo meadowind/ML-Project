@@ -1,0 +1,26 @@
+# Training image: runs `make data` + `make train` on a cloud machine (a Vertex AI custom job),
+# so the model never depends on someone's laptop. Same digest-pinned base and torch build as the
+# batch image; one hash-locked install (requirements-train.lock = runtime lock + training extras).
+FROM python@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534 AS builder
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
+WORKDIR /build
+COPY requirements-train.lock ./
+RUN pip install --default-timeout=100 --require-hashes --only-binary=:all: \
+      --index-url https://download.pytorch.org/whl/cpu \
+      --extra-index-url https://pypi.org/simple \
+      --prefix=/install -r requirements-train.lock
+
+FROM python@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534 AS train
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT} PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/app \
+    HF_HOME=/tmp/hf MLFLOW_TRACKING_URI=sqlite:////tmp/mlflow.db
+RUN useradd --create-home --uid 10001 runner
+COPY --from=builder /install /usr/local
+WORKDIR /app
+RUN mkdir -p /app/data /tmp/out && chown -R runner:runner /app /tmp/out
+COPY --chown=runner:runner src/ ./src/
+COPY --chown=runner:runner cloudlayer/ ./cloudlayer/
+COPY --chown=runner:runner scripts/train_job.py ./scripts/train_job.py
+COPY --chown=runner:runner data/dataset_lineage.json ./data/dataset_lineage.json
+USER runner
+CMD ["python", "scripts/train_job.py"]

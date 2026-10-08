@@ -4,7 +4,7 @@ TAG ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 PLATFORM ?= linux/amd64
 
-.PHONY: setup data train test lint portability-audit scan-secrets image clean lock lock-cloud
+.PHONY: setup data train test lint portability-audit scan-secrets image clean lock lock-cloud lock-train
 
 setup:
 	python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -36,5 +36,12 @@ lock-cloud:
 	uv pip compile requirements-cloud.in -c requirements-runtime.lock --generate-hashes \
 	  --python-version 3.11 --python-platform x86_64-manylinux_2_28 \
 	  -o requirements-cloud.lock
+
+lock-train:
+	grep -E '^[A-Za-z0-9_.-]+==' requirements-runtime.lock | cut -d' ' -f1 | grep -vi '^fsspec==' > .train-constraints.tmp
+	uv pip compile requirements-train.in -c .train-constraints.tmp --generate-hashes \
+	  --python-version 3.11 --python-platform x86_64-manylinux_2_28 -o .train-extras.tmp
+	python scripts/merge_locks.py requirements-runtime.lock .train-extras.tmp -o requirements-train.lock
+	rm -f .train-constraints.tmp .train-extras.tmp
 
 include make/batch.mk
