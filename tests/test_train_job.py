@@ -52,3 +52,17 @@ def test_publish_fails_loudly_when_training_produced_no_model(tmp_path):
     (out / "model_manifest.json").write_bytes(b"{}")
     with pytest.raises(FileNotFoundError):
         train_job.publish(_adapter(tmp_path), out, "train-1")
+
+
+def test_local_mode_trains_without_touching_the_cloud(monkeypatch, tmp_path, capsys):
+    """`make reproduce` sets TRAIN_LOCAL=1: no adapter is created and nothing is published."""
+    monkeypatch.setenv("TRAIN_LOCAL", "1")
+    monkeypatch.setattr(train_job, "OUT_DIR", tmp_path / "out")
+    monkeypatch.setattr(train_job, "fingerprint", lambda *_a: "abc")
+    steps = []
+    monkeypatch.setattr(train_job, "run", lambda cmd, **_env: steps.append(cmd[-1]))
+    monkeypatch.setattr(train_job, "publish",
+                        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("must not publish")))
+    assert train_job.main() == 0
+    assert steps == ["src/data/download_and_prep.py", "src/model/train.py"]
+    assert "trained_locally" in capsys.readouterr().out

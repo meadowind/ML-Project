@@ -9,7 +9,8 @@
    project storage, through the CloudAdapter (the identity attached to the job; no keys).
 
 Environment: TRAIN_RUN_ID (default train-<UTC time>), ALLOW_NEW_DATA=1 to accept a different
-dataset fingerprint. This script imports no ML libraries; the heavy work is in subprocesses.
+dataset fingerprint, TRAIN_LOCAL=1 to train without any cloud (used by `make reproduce`: the model
+stays in TRAIN_OUT_DIR and nothing is published). This script imports no ML libraries; the heavy work is in subprocesses.
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 ROOT = Path(__file__).resolve().parents[1]
 LINEAGE = ROOT / "data" / "dataset_lineage.json"
-OUT_DIR = Path("/tmp/out/lemon_classifier")  # container scratch space
+OUT_DIR = Path(os.environ.get("TRAIN_OUT_DIR", "/tmp/out/lemon_classifier"))  # container scratch space
 MLFLOW_DB = Path("/tmp/mlflow.db")
 MODEL_FILES = ("model.torchscript.pt", "weights.pt", "model_manifest.json")
 PREFIX = "models/trained"
@@ -63,9 +64,6 @@ def run(cmd: list[str], **env: str) -> None:
 
 
 def main() -> int:
-    from cloudlayer.factory import get_adapter
-    from src import config
-
     run_id = os.environ.get("TRAIN_RUN_ID") or "train-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     os.environ["TRAIN_RUN_ID"] = run_id
     expected = fingerprint()
@@ -73,6 +71,12 @@ def main() -> int:
     ensure_same_data(expected, fingerprint(), os.environ.get("ALLOW_NEW_DATA") == "1")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     run([sys.executable, "src/model/train.py"], MODEL_OUT_DIR=str(OUT_DIR), TRAIN_RUN_ID=run_id)
+    if os.environ.get("TRAIN_LOCAL") == "1":
+        print(json.dumps({"event": "trained_locally", "dir": str(OUT_DIR)}), flush=True)
+        return 0
+    from cloudlayer.factory import get_adapter
+    from src import config
+
     publish(get_adapter(config.load(strict=False)), OUT_DIR, run_id, extra=(MLFLOW_DB,))
     return 0
 
