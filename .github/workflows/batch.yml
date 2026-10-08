@@ -1,14 +1,12 @@
-# Scheduled batch scoring. Every 30 minutes: look for new photos in object storage;
-# only if there are some, pull the image and score them. Idle runs cost no image egress.
+# Manual batch scoring (workflow_dispatch only). The SCHEDULED batch now runs as a Cloud Run job
+# (lemon-batch) started every 30 minutes by Cloud Scheduler; see README "Schedule cadence".
+# GitHub's cron was replaced because it ran with gaps of 4-5 hours instead of 30 minutes.
 #
-# Kill switch: set the repository variable BATCH_ENABLED=false (Settings > Variables).
-# Manual run: Actions > batch > Run workflow (can replay, or turn the OOD check off for
-# the deliberate-failure demo).
+# This workflow stays for manual runs and the deliberate-failure demo:
+# Actions > batch > Run workflow (can replay, or turn the OOD check off).
 name: batch
 
 on:
-  schedule:
-    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       reprocess:
