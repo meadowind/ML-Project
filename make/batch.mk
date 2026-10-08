@@ -4,7 +4,7 @@
 PYTHON ?= python
 DATA    ?= $(CURDIR)/data
 
-.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan
+.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan deploy-batch run-batch-cloud scheduler-run-now scheduler-pause scheduler-resume
 
 cloud-check:
 	$(PYTHON) scripts/cloud_check.py
@@ -44,6 +44,8 @@ teardown-plan:
 	gcloud storage buckets list --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
 	gcloud artifacts repositories list --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
 	gcloud ai models list --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
+	gcloud run jobs list --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="metadata.labels.lab=capstone" --format="value(metadata.name)"
+	gcloud scheduler jobs list --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="name~lemon-batch" --format="value(name)"
 
 # Register the production model (needs the digest-pinned image printed by `make image-push` / CI).
 #   make register-model IMAGE_REF=asia-southeast1-docker.pkg.dev/<proj>/lemon/lemon-batch@sha256:...
@@ -54,3 +56,25 @@ register-model:
 # Pull the model back from the registry (REF=name@version, default latest) and score 5 held-out images.
 reload-check:
 	$(PYTHON) scripts/reload_check.py $(if $(REF),--ref $(REF),)
+
+# --- Scheduled batch on Cloud Run + Cloud Scheduler -------------------------------------------
+# The job runs the same image as CI publishes (digest-pinned) and is started by Cloud Scheduler.
+#   make deploy-batch IMAGE_REF=asia-southeast1-docker.pkg.dev/<proj>/lemon/lemon-batch@sha256:...
+deploy-batch:
+	@test -n "$(IMAGE_REF)" || { echo "Set IMAGE_REF=<digest-pinned image>"; exit 1; }
+	bash infra/setup_cloudrun.sh "$(IMAGE_REF)"
+
+# Run the job once, right now, and wait for it to finish (a manual batch in the cloud).
+run-batch-cloud:
+	gcloud run jobs execute lemon-batch --wait --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)"
+
+# Fire the Cloud Scheduler entry immediately (what the clock does every 30 minutes).
+scheduler-run-now:
+	gcloud scheduler jobs run lemon-batch-every-30min --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)"
+
+# Kill switch: needs no repository admin rights, only the project.
+scheduler-pause:
+	gcloud scheduler jobs pause lemon-batch-every-30min --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)"
+
+scheduler-resume:
+	gcloud scheduler jobs resume lemon-batch-every-30min --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)"

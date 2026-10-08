@@ -4,7 +4,7 @@ TAG ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 PLATFORM ?= linux/amd64
 
-.PHONY: setup data train test lint portability-audit scan-secrets image clean lock
+.PHONY: setup data train test lint portability-audit scan-secrets image clean lock lock-cloud
 
 setup:
 	python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -31,5 +31,10 @@ lock:
 	  --extra-index-url https://pypi.org/simple \
 	  --index-strategy unsafe-best-match \
 	  -o requirements-runtime.lock
+
+lock-cloud:
+	uv pip compile requirements-cloud.in -c requirements-runtime.lock --generate-hashes \
+	  --python-version 3.11 --python-platform x86_64-manylinux_2_28 \
+	  -o requirements-cloud.lock
 
 include make/batch.mk

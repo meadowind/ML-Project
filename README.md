@@ -1,6 +1,6 @@
 # Lemon Leaf Triage — scheduled batch inference on GCP
 
-Growers upload photos of lemon leaves; every 30 minutes a batch job scores the new photos,
+Growers upload photos of lemon leaves; on a schedule (configured every 30 minutes) a batch job scores the new photos,
 flags leaves that are not healthy for manual inspection, and sets aside photos it should not
 trust (blurry, corrupted, not a leaf). Nothing needs to be running between batches.
 
@@ -12,7 +12,7 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 |---|---|
 | User | An orchard manager who wants a short list of trees to walk to |
 | Serving pattern | **Scheduled batch** (not online): leaf photos are not urgent, and batch costs nothing while idle |
-| Freshness | A photo uploaded now is scored within ~30 minutes plus job time |
+| Freshness | A photo is scored at the next scheduled run. The cron is set to every 30 minutes, but GitHub runs schedules best-effort (see "Schedule cadence"); a manual run scores it at once |
 | Output | One CSV row per photo (`class`, `confidence`, `needs_inspection`, `status`) and one summary JSON per batch |
 
 ## Architecture
@@ -20,7 +20,7 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 ```mermaid
 flowchart LR
     U["grower uploads<br>intake/*.jpg"] --> B[("object storage<br>(GCS bucket)")]
-    CRON["GitHub Actions<br>cron every 30 min"] -->|"sync_down: new files only"| B
+    CRON["GitHub Actions<br>cron (every 30 min, best-effort)"] -->|"sync_down: new files only"| B
     CRON --> C["container<br>validator + MobileNetV3-Small"]
     C -->|"scored"| A["archive/"]
     C -->|"rejected / crashed"| Q["quarantine/"]
@@ -45,6 +45,10 @@ The container only sees local folders: it holds no cloud credentials and imports
 - **`intake/` is never modified**, so any batch can be replayed (`--reprocess`).
 - **One bad file never stops the batch.** Rejected files get a status (`REJECTED_BLURRED`, `REJECTED_OOD_NON_LEAF`, `REJECTED_RESOLUTION`, `REJECTED_CORRUPTED`); anything unexpected becomes `ERROR_UNEXPECTED`. Every file ends up in `archive/` or `quarantine/`.
 - **Every log line is JSON and carries the `batch_id`.**
+- **Schedule cadence.** `batch.yml` is configured with `cron: "*/30 * * * *"`, but GitHub runs scheduled
+  workflows on a best-effort basis. In our deployment the observed gap was roughly 4–5 hours (runs at
+  02:26, 06:40 and 11:14 local time). A run that finds no new photos finishes in under a minute and
+  writes no summary. For a demo, trigger a batch immediately with Actions → batch → Run workflow.
 
 ## Quick start (clean clone)
 
@@ -134,7 +138,8 @@ repository; `infra/setup_gcp.sh` grants both. The registered model carries the c
 | `batch.yml` | cron `*/30`, or manual | pulls new photos; **only if there are some** pulls the image, scores, pushes results |
 
 Pull-request runs have no cloud access. OIDC is restricted to this repository's `main` branch.
-Kill switch: set the repository variable `BATCH_ENABLED=false`.
+Kill switch: set the repository variable `BATCH_ENABLED=false` (Settings → Variables; needs repository admin).
+Without admin rights, open a pull request that removes the `schedule:` block from `batch.yml`.
 Manual run options: replay everything, or turn the non-leaf guard off (see below).
 **CI blocks a bad commit.** To show the tests can actually fail, a deliberately broken commit (blur
 cutoff set to 0, so blurry photos would be scored) was pushed in a pull request that was never
@@ -148,23 +153,33 @@ Inputs already produced for it: `summary/<batch>.json` (`rejected_rate`, `low_co
 `files_total`, `duration_seconds`) and `logs/<batch>.jsonl`.
 
 ## The failure we designed for
-Regression tests: `tests/test_batch.py` (`test_non_leaf_scores_confidently_without_guard…`,
-`test_ood_guard_is_on_by_default…`) and `tests/test_failure_regression.py`, which uses real photos
-from this demo (`tests/failure_cases/`): paper and glass must be rejected, and the brick wall, which
-still gets through, is kept as a strict `xfail` so the gap is recorded and the test fails loudly the
-day the guard starts catching it. On GitHub: Actions → batch → Run workflow with `enable_ood_check`
-unticked.
 
-**What it revealed / what we changed:**
+**What we did.** We scored 8 photos that are not lemon leaves (paper, glass, hand, keyboard, brick wall,
+and photos of other plants), first with the non-leaf guard off and then on:
 ```bash
 make image
 bash infra/failure_demo.sh path/to/folder_of_non_leaf_photos
 ```
-This scores the same photos with the guard off, then on, and prints both side by side.
-Regression tests: `tests/test_batch.py` (`test_non_leaf_scores_confidently_without_guard…`,
-`test_ood_guard_is_on_by_default…`). On GitHub: Actions → batch → Run workflow with
-`enable_ood_check` unticked.
-What it revealed / what we changed: We scored 8 photos that are not lemon leaves (paper, glass, hand, keyboard, brick wall, and photos of other plants). With the guard off, every photo got a disease label, five of them with confidence ≥ 0.90 (a brick wall as Dry_Leaf at 1.00, a keyboard as Anthracnose at 0.93): a softmax classifier always picks a class, so confidence says nothing about whether the input is a leaf. With the guard on, 2 of 8 were rejected (REJECTED_OOD_NON_LEAF); 6 still passed. The guard is a colour check that accepts foliage green, necrotic brown and soot black on purpose, so that real Dry_Leaf and Sooty_Mould leaves are not rejected (0.00% false rejects on the clean data). The cost is that brown or dark non-leaves and other plants can pass. We kept the guard, kept it on by default, and documented the limit instead of tuning thresholds on 8 photos. The proper fix is a learned "not a leaf" check (an extra class or one-class detector trained on non-leaf images); it is not done here. The photos that slipped through had plant-colour ratios of 0.10–0.99, overlapping or exceeding the range of real leaves we scored (0.27–0.62), so no single threshold separates them without rejecting real leaves.
+On GitHub the same switch is Actions → batch → Run workflow with `enable_ood_check` unticked.
+
+**What it revealed.** With the guard off, every photo got a disease label, five of them with confidence
+≥ 0.90 (a brick wall as Dry_Leaf at 1.00, a keyboard as Anthracnose at 0.93): a softmax classifier always
+picks a class, so confidence says nothing about whether the input is a leaf. With the guard on, 2 of 8 were
+rejected (`REJECTED_OOD_NON_LEAF`); 6 still passed. The guard is a colour check that accepts foliage green,
+necrotic brown and soot black on purpose, so that real Dry_Leaf and Sooty_Mould leaves are not rejected
+(0.00% false rejects on the clean data). The cost is that brown or dark non-leaves and other plants can pass.
+The photos that slipped through had plant-colour ratios of 0.10–0.99, overlapping or exceeding the range of
+real leaves we scored (0.27–0.62), so no single threshold separates them without rejecting real leaves.
+
+**What we changed.** We kept the guard, kept it on by default, and documented the limit instead of tuning
+thresholds on 8 photos. The failure is now fed back into the tests:
+- `tests/test_batch.py` (`test_non_leaf_scores_confidently_without_guard…`, `test_ood_guard_is_on_by_default…`);
+- `tests/test_failure_regression.py`, which uses real photos from this demo (`tests/failure_cases/`): paper
+  and glass must be rejected, and the brick wall, which still gets through, is kept as a strict `xfail` so
+  the gap is recorded and the test fails loudly the day the guard starts catching it.
+
+The proper fix is a learned "not a leaf" check (an extra class or a one-class detector trained on non-leaf
+images); it is not done here.
 
 ## Cost per 1,000 predictions
 TODO: measured numbers. Cost components: scoring time on the runner, storage and operations
@@ -175,7 +190,8 @@ in the bucket, registry storage, and image download only for batches that contai
 make teardown-plan            # lists what would be deleted (labelled buckets, registries, registered models)
 make teardown CONFIRM=yes     # deletes them
 ```
-Also disable the schedule (`BATCH_ENABLED=false`, or delete `.github/workflows/batch.yml`), then
+Also disable the schedule (an admin sets `BATCH_ENABLED=false`, or a pull request removes the `schedule:` block
+from `.github/workflows/batch.yml`), then
 check the GCP console and billing page — deletion is asynchronous. The OIDC pool and service
 accounts cost nothing; deleting the project removes them too (`gcloud projects delete <id>`).
 Verified safe with `bash infra/test_teardown.sh` (throwaway resources only).
@@ -185,6 +201,13 @@ A batch of 7 real test photos uploaded to the bucket was scored by the scheduled
 GitHub: 7 scored, 0 rejected, 3 flagged *needs inspection*. One *Sooty_Mould* leaf
 (`test_Sooty_Mould_0017.jpg`) was predicted *Healthy_Leaf* with confidence 0.98 and was not
 flagged: a confident miss that the confidence threshold cannot catch (see the model card).
+
+A second batch (`batch-20261007T192733Z`) was picked up by the **scheduled** workflow without anyone
+pressing a button: 6 files, 4 scored and 2 rejected (`glass.jpg` and `paper_sheet.jpg`, both
+`REJECTED_OOD_NON_LEAF`), so `rejected_rate` was 0.33, above the 0.10 alert threshold; the job took 1.95 s.
+The scheduled runs after it found no new photos, finished in under a minute and wrote nothing.
+A manual run just before it failed at the upload step because GitHub's OIDC token service returned
+HTTP 500; nothing had been written, and the next scheduled run processed the same photos.
 
 ## Model card and limits
 See `docs/MODEL_CARD.md`. In short: single-source dataset; class imbalance; some diseased
