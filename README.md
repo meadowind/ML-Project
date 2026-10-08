@@ -211,7 +211,7 @@ HTTP 500; nothing had been written, and the next scheduled run processed the sam
 
 ## Model card and limits
 See `docs/MODEL_CARD.md`. In short: single-source dataset; class imbalance; some diseased
-leaves (Sooty_Mould recall 0.83) are predicted *Healthy*, sometimes confidently, and would not be
+leaves (Sooty_Mould recall 0.78; 9 of the 10 test errors are diseased leaves called Healthy) are predicted *Healthy*, sometimes confidently, and would not be
 flagged. Data and training details: `README_DATA_TRAINING.md`.
 
 ## Repository map
