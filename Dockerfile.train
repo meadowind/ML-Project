@@ -13,7 +13,7 @@ RUN pip install --default-timeout=100 --require-hashes --only-binary=:all: \
 FROM python@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534 AS train
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT} PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/app \
-    HF_HOME=/tmp/hf MLFLOW_TRACKING_URI=sqlite:////tmp/mlflow.db
+    HF_HOME=/tmp/hf MLFLOW_TRACKING_URI=sqlite:////tmp/mlflow.db GIT_PYTHON_REFRESH=quiet
 RUN useradd --create-home --uid 10001 runner
 COPY --from=builder /install /usr/local
 WORKDIR /app

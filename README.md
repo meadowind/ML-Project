@@ -29,13 +29,18 @@ training image, rebuilds the dataset from the pinned Hugging Face revision insid
 the processed-data fingerprint equals `data/dataset_lineage.json`, and the test accuracy is within the
 claim above. Results are written to `reports/reproduce/` and never touch the committed model.
 
-**What the tolerance covers.** Same code, data, seed and PyTorch version (2.6.0, pinned by hash), on
-different hardware: our own runs gave 0.9608 on a laptop and 0.9510 on the Vertex AI job, a difference of 2
-of the 204 test images, caused by CPU floating-point differences. ±0.020 is about 4 images. It does **not**
-cover a different PyTorch version, which gave 0.9412 on the same data, so the version is locked in
-`requirements-train.lock`. Widening the tolerance to hide non-determinism would be visible, so we keep it
-at this level. On Apple Silicon you will see a `linux/amd64` platform warning: the image is built for
-amd64 on purpose and runs under emulation, which is slower.
+**Runtime.** About 6 minutes on a MacBook Air (Apple Silicon, running the `linux/amd64` image under
+emulation) with the image already built: about 3 minutes to download the dataset and about 2 minutes to train
+5 epochs. The very first run also builds the image, which adds the time to download the pinned dependencies.
+
+**What the tolerance covers.** Same code, data, seed and PyTorch version (2.6.0, pinned by hash). On the same
+CPU architecture the result is identical: the Vertex AI job (x86-64) and a MacBook running the amd64 image gave
+exactly 0.9510. Training directly on an arm64 laptop, outside Docker, gave 0.9608 (2 of the 204 test images
+different), which we attribute to CPU floating-point differences. ±0.020 is about 4 images, so a different
+x86-64 CPU also passes; we have not tried one. It does **not** cover a different PyTorch version, which gave
+0.9412 on the same data, so the version is locked in `requirements-train.lock`. We did not widen the
+tolerance to hide non-determinism. The image is built for amd64 on purpose; on Apple Silicon you will see a
+platform warning and the run is slower because it is emulated.
 
 ## Architecture
 
