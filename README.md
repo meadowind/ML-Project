@@ -1,6 +1,6 @@
 # Lemon Leaf Triage — scheduled batch inference on GCP
 
-Growers upload photos of lemon leaves; on a schedule (configured every 30 minutes) a batch job scores the new photos,
+Growers upload photos of lemon leaves; every 30 minutes a Cloud Scheduler entry starts a Cloud Run job that scores the new photos,
 flags leaves that are not healthy for manual inspection, and sets aside photos it should not
 trust (blurry, corrupted, not a leaf). Nothing needs to be running between batches.
 
@@ -12,7 +12,7 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 |---|---|
 | User | An orchard manager who wants a short list of trees to walk to |
 | Serving pattern | **Scheduled batch** (not online): leaf photos are not urgent, and batch costs nothing while idle |
-| Freshness | A photo is scored at the next scheduled run. The cron is set to every 30 minutes, but GitHub runs schedules best-effort (see "Schedule cadence"); a manual run scores it at once |
+| Freshness | A photo is scored at the next scheduled run: at most 30 minutes plus the job's own run time (about 10 s start-up and 11 s of scoring for 4 photos in our tests). Measured cadence, and the before/after comparison with GitHub's cron, are in "Schedule cadence" |
 | Output | One CSV row per photo (`class`, `confidence`, `needs_inspection`, `status`) and one summary JSON per batch |
 
 ## Architecture
@@ -20,15 +20,17 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 ```mermaid
 flowchart LR
     U["grower uploads<br>intake/*.jpg"] --> B[("object storage<br>(GCS bucket)")]
-    CRON["GitHub Actions<br>cron (every 30 min, best-effort)"] -->|"sync_down: new files only"| B
-    CRON --> C["container<br>validator + MobileNetV3-Small"]
+    SCH["Cloud Scheduler<br>*/30 * * * * (UTC)"] -->|"starts"| C["Cloud Run job lemon-batch<br>validator + MobileNetV3-Small"]
+    B -->|"sync_down: new files only"| C
     C -->|"scored"| A["archive/"]
     C -->|"rejected / crashed"| Q["quarantine/"]
     C --> R["results/*.csv<br>summary/*.json<br>logs/*.jsonl"]
     A & Q & R -->|"sync_up"| B
     PR["pull request / push"] --> CI["CI: secret scan, lint,<br>portability audit, tests,<br>image build + real-model test"]
     CI -->|"main only, OIDC"| AR[("Artifact Registry<br>image per commit")]
-    AR --> C
+    AR -->|"digest-pinned"| C
+    T["Vertex AI custom job<br>(training)"] -->|"models/trained/&lt;run&gt;"| B
+    T -.->|"training image digest in lineage"| MR[("Vertex AI<br>Model Registry")]
 ```
 
 Three layers, same contract as the course portability reference:
@@ -37,18 +39,34 @@ Three layers, same contract as the course portability reference:
 2. `cloud.env` (gitignored; `cloud.env.ci` carries the non-secret values CI needs) — configuration.
 3. `cloudlayer/` — the only code that talks to GCP (`GcpAdapter`). `make portability-audit` enforces it.
 
-The container only sees local folders: it holds no cloud credentials and imports no cloud SDK.
-`scripts/sync_down.py` and `scripts/sync_up.py` move files through the adapter.
+The scoring code (`src/`) only sees local folders and imports no cloud SDK. Around it,
+`scripts/cloud_batch.py` runs one cycle inside the Cloud Run job: `sync_down` (pull new photos) →
+score → `sync_up` (push results), moving files through the adapter with the credentials of the job's own
+service account (`lemon-batch`, no key files). The image therefore includes the Google Cloud Storage
+client (hash-locked in `requirements-cloud.lock`); the portability rule is that only `cloudlayer/` may use it.
 
 ### Behaviour worth knowing
 - **New files only.** A photo is "new" if it is in `intake/` and absent from `archive/` and `quarantine/`. Nothing new means exit immediately, without loading the model.
 - **`intake/` is never modified**, so any batch can be replayed (`--reprocess`).
 - **One bad file never stops the batch.** Rejected files get a status (`REJECTED_BLURRED`, `REJECTED_OOD_NON_LEAF`, `REJECTED_RESOLUTION`, `REJECTED_CORRUPTED`); anything unexpected becomes `ERROR_UNEXPECTED`. Every file ends up in `archive/` or `quarantine/`.
 - **Every log line is JSON and carries the `batch_id`.**
-- **Schedule cadence.** `batch.yml` is configured with `cron: "*/30 * * * *"`, but GitHub runs scheduled
-  workflows on a best-effort basis. In our deployment the observed gap was roughly 4–5 hours (runs at
-  02:26, 06:40 and 11:14 local time). A run that finds no new photos finishes in under a minute and
-  writes no summary. For a demo, trigger a batch immediately with Actions → batch → Run workflow.
+- **Schedule cadence (changed, with evidence).** The batch first ran from a GitHub Actions cron
+  (`*/30 * * * *`). GitHub runs schedules on a best-effort basis, and in our deployment it missed the
+  30-minute promise badly. We replaced it with **Cloud Scheduler → Cloud Run job**
+  (`infra/setup_cloudrun.sh`, `make deploy-batch`). The job has a 600 s timeout and no retries, so a failed run
+  is visible instead of silently repeated.
+
+  | | GitHub Actions cron (before) | Cloud Scheduler → Cloud Run job (after) |
+  |---|---|---|
+  | Configured | every 30 min | every 30 min |
+  | Observed gaps between runs | 4 h 14 m 25 s and 4 h 33 m 54 s | 30 m 03 s, 30 m 00 s, 30 m 00 s |
+  | Start vs the scheduled minute | hours late (3 runs in 8 h 48 m, about 17 expected) | 1–4 s after the minute |
+  | Worst-case wait for a new photo | more than 4 h 30 m | 30 min + job run time |
+
+  "After" is the first four consecutive scheduler executions (13:30:01, 14:00:04, 14:30:04 and 15:00:04 UTC;
+  see `gcloud run jobs executions list --job lemon-batch`). The GitHub workflow is now manual only
+  (`workflow_dispatch`), for replays and the failure demo. A run that finds no new photos writes no
+  summary and does not load the model.
 
 ## Quick start (clean clone)
 
@@ -85,6 +103,20 @@ when a cloud provider is configured) and registered as a new MLflow model versio
 `candidate`. The run id is stored in the model manifest. Open the UI with
 `mlflow ui --backend-store-uri sqlite:///mlflow.db`.
 Training results depend on the PyTorch version (see the model card, "Reproducibility").
+
+**Training on cloud compute (Vertex AI custom job).** The model that serves was trained in the cloud:
+```bash
+make train-cloud                              # builds Dockerfile.train, pushes it, submits a Vertex AI custom job, waits
+make fetch-trained RUN=<run id>               # downloads, verifies and compares with the committed model
+make fetch-trained RUN=<run id> ARGS=--adopt  # copies it to models/registry/ (then open a pull request)
+```
+The job (CPU, `n1-standard-8`) rebuilds the dataset from the pinned Hugging Face revision and refuses to
+train unless its processed-data hash equals the one in `data/dataset_lineage.json`. It writes
+`model.torchscript.pt`, `weights.pt` and `model_manifest.json` to `models/trained/<run id>/` in the bucket.
+The manifest records the training environment, job id, run id and the **digest of the training image**, and
+registration copies them into the model's lineage next to the serving image digest. Current model: run
+`train-20261008t140852z`, torch 2.6.0+cpu, test accuracy 95.1% (the model card compares it with the
+earlier local run).
 The model that serves is committed at `models/registry/lemon_classifier_v2/`
 (`model.torchscript.pt` + `model_manifest.json`).
 
@@ -108,17 +140,29 @@ Resources are labelled `course=itcs355,student=<project>,lab=capstone`.
 If `setup_gcp.sh` stops at an `add-iam-policy-binding` step, the Vertex AI service agent was not
 created yet: wait a minute and run the script again (it is safe to repeat).
 
-Run a batch by hand: `make demo-upload FILES="…"` then `make run-batch`.
+### The scheduled batch (Cloud Run job + Cloud Scheduler)
+```bash
+make deploy-batch IMAGE_REF=<registry>/lemon-batch@sha256:...   # job, scheduler service account, */30 entry
+make demo-upload FILES="a.jpg b.jpg"   # simulate an upload
+make run-batch-cloud                   # run the job once now and wait for it
+make scheduler-run-now                 # fire the scheduler entry, as the clock would
+make scheduler-pause                   # kill switch (make scheduler-resume to restart)
+```
+The image is pinned by digest. The job runs as `lemon-batch@…`; the scheduler calls the Cloud Run API as
+`lemon-scheduler@…`, which only has `run.invoker` on this one job.
+
+Run a batch by hand locally: `make demo-upload FILES="…"` then `make run-batch`.
 
 ## Model registry
 The production model is registered in **Vertex AI Model Registry** through the same adapter layer
 (`GcpAdapter.register_model`), with its lineage as labels and, in full, in the version description:
-git commit, processed-data hash, MLflow run id, digest-pinned serving image, seed and metrics.
-**How the batch job pins its model:** the scheduled job runs a container image that contains exactly
+git commit, processed-data hash, MLflow run id, digest-pinned serving image, training image digest and
+Vertex job, seed and metrics.
+**How the batch job pins its model:** the Cloud Run job runs a container image that contains exactly
 this model (`models/registry/lemon_classifier_v2/`), and the image is pinned by commit tag and digest,
 so a batch is replayable against the same model and code. The registry holds the same model with its
 lineage, and `make reload-check` proves it can be pulled back by version and used. We chose the image
-as the runtime source so that the container stays free of cloud credentials and SDKs.
+as the runtime source so that a batch cannot change model between runs without a new deployment.
 ```bash
 make image-push                       # or take the digest from the CI build of main
 make register-model IMAGE_REF=<registry>/lemon-batch@sha256:...
@@ -135,11 +179,11 @@ repository; `infra/setup_gcp.sh` grants both. The registered model carries the c
 | `ci.yml` → `test` | every PR and push | gitleaks over the **full** history, hash-checked install, ruff, portability audit, pytest |
 | `ci.yml` → `build` | after `test` | builds the image, then runs the **real model** on a deliberately bad batch (corrupt, blurred, non-leaf, good) and asserts exactly 1 scored and 3 quarantined; a second run must be skipped |
 | `ci.yml` → publish step | push to `main` only | pushes the image tagged with the commit, using short-lived OIDC credentials |
-| `batch.yml` | cron `*/30`, or manual | pulls new photos; **only if there are some** pulls the image, scores, pushes results |
+| `ci.yml` → training image | every PR and push | builds `Dockerfile.train` and smoke-tests its imports, so the cloud training job cannot rot |
+| `batch.yml` | manual only | replay or failure-demo batch run from GitHub (the schedule lives in Cloud Scheduler) |
 
 Pull-request runs have no cloud access. OIDC is restricted to this repository's `main` branch.
-Kill switch: set the repository variable `BATCH_ENABLED=false` (Settings → Variables; needs repository admin).
-Without admin rights, open a pull request that removes the `schedule:` block from `batch.yml`.
+Kill switch: `make scheduler-pause` (pauses the Cloud Scheduler entry; needs the GCP project, not GitHub admin).
 Manual run options: replay everything, or turn the non-leaf guard off (see below).
 **CI blocks a bad commit.** To show the tests can actually fail, a deliberately broken commit (blur
 cutoff set to 0, so blurry photos would be scored) was pushed in a pull request that was never
@@ -187,27 +231,38 @@ in the bucket, registry storage, and image download only for batches that contai
 
 ## Shutting everything down
 ```bash
-make teardown-plan            # lists what would be deleted (labelled buckets, registries, registered models)
-make teardown CONFIRM=yes     # deletes them
+make scheduler-pause          # stop new runs first
+make teardown-plan            # lists what would be deleted (buckets, registries, registered models,
+                              # Cloud Run jobs, scheduler entries, training jobs)
+make teardown CONFIRM=yes     # deletes them; scheduler entries and Cloud Run jobs go first
 ```
-Also disable the schedule (an admin sets `BATCH_ENABLED=false`, or a pull request removes the `schedule:` block
-from `.github/workflows/batch.yml`), then
-check the GCP console and billing page — deletion is asynchronous. The OIDC pool and service
+Then check the GCP console and billing page — deletion is asynchronous. The OIDC pool and service
 accounts cost nothing; deleting the project removes them too (`gcloud projects delete <id>`).
 Verified safe with `bash infra/test_teardown.sh` (throwaway resources only).
 
 ## What the live deployment showed
-A batch of 7 real test photos uploaded to the bucket was scored by the scheduled workflow on
-GitHub: 7 scored, 0 rejected, 3 flagged *needs inspection*. One *Sooty_Mould* leaf
+**On GitHub's cron (first design).** A batch of 7 real test photos was scored by the scheduled workflow:
+7 scored, 0 rejected, 3 flagged *needs inspection*. One *Sooty_Mould* leaf
 (`test_Sooty_Mould_0017.jpg`) was predicted *Healthy_Leaf* with confidence 0.98 and was not
 flagged: a confident miss that the confidence threshold cannot catch (see the model card).
+A second batch (`batch-20261007T192733Z`) was picked up without anyone pressing a button: 6 files,
+4 scored and 2 rejected (`glass.jpg`, `paper_sheet.jpg`, both `REJECTED_OOD_NON_LEAF`), so
+`rejected_rate` was 0.33, above the 0.10 alert threshold. A manual run just before it failed at the upload
+step because GitHub's OIDC token service returned HTTP 500; nothing had been written, and the next run
+processed the same photos. The runs came 4–5 hours apart, which is why the schedule moved to Cloud Scheduler.
 
-A second batch (`batch-20261007T192733Z`) was picked up by the **scheduled** workflow without anyone
-pressing a button: 6 files, 4 scored and 2 rejected (`glass.jpg` and `paper_sheet.jpg`, both
-`REJECTED_OOD_NON_LEAF`), so `rejected_rate` was 0.33, above the 0.10 alert threshold; the job took 1.95 s.
-The scheduled runs after it found no new photos, finished in under a minute and wrote nothing.
-A manual run just before it failed at the upload step because GitHub's OIDC token service returned
-HTTP 500; nothing had been written, and the next scheduled run processed the same photos.
+**On Cloud Scheduler + Cloud Run (current).** Scheduler executions started 1–4 s after the minute, every
+30 minutes. A manual execution scored a newly uploaded photo and wrote its summary. After the cloud-trained
+model (`v2.1.0`) was deployed, 4 new photos (3 *Sooty_Mould*, 1 *Bacterial_Blight*) were scored in 11 s
+and all four were flagged.
+
+**A second failure, found by using the system.** In an earlier batch on the cloud-trained model, a
+*Sooty_Mould* leaf was scored *Healthy_Leaf* at confidence 0.54 and `needs_inspection` was `false`, although
+the data contract says a leaf is flagged when it is not healthy **or** its confidence is below 0.6. The code
+only checked the class, and an existing test had the same mistake written into it (a 0.40-confidence
+"Healthy" expected to be unflagged). Fixed in `src/batch/run.py`;
+`tests/test_batch.py::test_needs_inspection_follows_the_contract` now covers a sure Healthy, an unsure
+Healthy and a diseased leaf.
 
 ## Model card and limits
 See `docs/MODEL_CARD.md`. In short: single-source dataset; class imbalance; some diseased
@@ -219,6 +274,6 @@ flagged. Data and training details: `README_DATA_TRAINING.md`.
 src/batch/       batch job              src/model/       validator, inference, training
 src/config.py    the only env reader    cloudlayer/      GcpAdapter + base interface
 scripts/         sync, fixtures, audit  infra/           GCP setup, OIDC, teardown test, demo
-tests/           pytest                 .github/workflows/  CI and scheduled batch
+tests/           pytest                 .github/workflows/  CI and manual batch
 models/registry/ committed model        data/            lineage + (ignored) working folders
 ```
