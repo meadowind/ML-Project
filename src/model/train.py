@@ -198,7 +198,7 @@ def train_v2():
 
     manifest = {
         "model_name": "lemon_leaf_classifier",
-        "version": "v2.0.0",
+        "version": "v2.1.0",
         "training_date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "git_commit": get_git_commit(),
         "framework_versions": {

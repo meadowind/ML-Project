@@ -1,6 +1,6 @@
 {
   "model_name": "lemon_leaf_classifier",
-  "version": "v2.0.0",
+  "version": "v2.1.0",
   "training_date": "2026-10-08T14:26:55Z",
   "git_commit": "21ad4a90fd7fdde25443b01fc15f6d623b032460",
   "framework_versions": {
