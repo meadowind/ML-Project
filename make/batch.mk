@@ -46,6 +46,7 @@ teardown-plan:
 	gcloud ai models list --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
 	gcloud run jobs list --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="metadata.labels.lab=capstone" --format="value(metadata.name)"
 	gcloud scheduler jobs list --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="name~lemon-batch" --format="value(name)"
+	gcloud ai custom-jobs list --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)" --filter="labels.lab=capstone" --format="value(name)"
 
 # Register the production model (needs the digest-pinned image printed by `make image-push` / CI).
 #   make register-model IMAGE_REF=asia-southeast1-docker.pkg.dev/<proj>/lemon/lemon-batch@sha256:...
