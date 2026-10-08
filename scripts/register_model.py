@@ -37,6 +37,7 @@ def build_lineage(manifest: dict, image: str) -> dict[str, str]:
     metrics = manifest.get("metrics", {}) or {}
     lin = manifest.get("dataset_lineage", {}) or {}
     hp = manifest.get("hyperparameters", {}) or {}
+    tr = manifest.get("training", {}) or {}
     raw = {
         "git_commit": manifest.get("git_commit"),
         "data_version": lin.get("processed_dir_sha256"),
@@ -50,6 +51,9 @@ def build_lineage(manifest: dict, image: str) -> dict[str, str]:
         "metric_val": metrics.get("best_val_accuracy"),
         "metric_test": metrics.get("test_accuracy"),
         "metric_macro_f1": metrics.get("macro_f1"),
+        "training_environment": tr.get("environment"),
+        "training_image_digest": tr.get("image_digest"),
+        "training_job": tr.get("job"),
     }
     return {k: str(v) for k, v in raw.items() if v is not None}
 

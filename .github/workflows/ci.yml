@@ -81,6 +81,12 @@ jobs:
       - name: Build image (digest-pinned base, hash-locked deps)
         run: make image TAG="$SHORT" GIT_COMMIT="$GITHUB_SHA"
 
+      - name: Build training image and smoke-test its imports
+        run: |
+          docker buildx build --platform linux/amd64 -f Dockerfile.train \
+            --build-arg GIT_COMMIT="$GITHUB_SHA" -t "lemon-train:$SHORT" --load .
+          docker run --rm "lemon-train:$SHORT" python -c "import torch, torchvision, datasets, sklearn, pandas, mlflow; from google.cloud import storage; print('training image ok, torch', torch.__version__)"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

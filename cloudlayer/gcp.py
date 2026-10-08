@@ -156,6 +156,57 @@ class GcpAdapter(CloudAdapter):
         lineage["resolved_ref"] = model_ref
         return lineage
 
+    # --- training (Vertex AI custom job) ------------------------------------------
+    DEFAULT_TRAIN_MACHINE = "n1-standard-8"  # CPU only: MobileNetV3-small on ~1,000 photos
+
+    def _training_spec(self, image_uri: str, args: dict) -> dict:
+        """The custom job's worker pool: one CPU machine running the training image."""
+        run_id = args["run_id"]
+        env = {
+            "CLOUD_PROVIDER": self.cfg.provider, "PROJECT_ID": self.cfg.project_id,
+            "REGION": self.cfg.region, "BLOB_URI": self.cfg.blob_uri,
+            "CONTAINER_REGISTRY": self.cfg.container_registry,
+            "MODEL_REGISTRY_NAME": self.cfg.model_registry_name,
+            "IDENTITY_REF": self.cfg.identity_ref,
+            "TRAIN_IMAGE_REF": image_uri, "TRAIN_RUN_ID": run_id,
+            **{k: str(v) for k, v in (args.get("env") or {}).items()},
+        }
+        return {
+            "machine_spec": {"machine_type": args.get("machine_type") or self.DEFAULT_TRAIN_MACHINE},
+            "replica_count": 1,
+            "container_spec": {
+                "image_uri": image_uri,
+                "env": [{"name": k, "value": v} for k, v in env.items()],
+            },
+        }
+
+    def submit_training(self, image_uri: str, args: dict) -> str:
+        """Start the training image as a custom job; returns the job's resource name.
+
+        `args`: run_id (required), machine_type, env (extra variables). The container's own
+        CMD does the work; the job runs as IDENTITY_REF, so no key is involved.
+        """
+        if "@sha256:" not in image_uri:
+            raise ValueError("training image must be digest-pinned (repo@sha256:...)")
+        aiplatform = self._aiplatform()
+        bucket, prefix = self._bucket_and_prefix()
+        staging = f"gs://{bucket}/{prefix + '/' if prefix else ''}vertex-staging"
+        job = aiplatform.CustomJob(
+            display_name=f"lemon-train-{args['run_id']}",
+            worker_pool_specs=[self._training_spec(image_uri, args)],
+            staging_bucket=staging,
+            labels={**self.cfg.tags("capstone"), "run_id": _label_value(args["run_id"])},
+        )
+        job.submit(service_account=self.cfg.identity_ref or None)
+        return job.resource_name
+
+    def wait_training(self, job_id: str) -> dict:
+        """Block until the job ends; raises if it failed (the SDK raises with the job's error)."""
+        aiplatform = self._aiplatform()
+        job = aiplatform.CustomJob.get(job_id)
+        job.wait()
+        return {"job": job.resource_name, "state": job.state.name}
+
     # --- scheduled batch (Cloud Run job + Cloud Scheduler) -----------------------
     def _gcloud_json(self, *args: str) -> list[dict] | None:
         """Run a gcloud list command; None when it cannot run (API disabled, no permission)."""
@@ -232,6 +283,12 @@ class GcpAdapter(CloudAdapter):
             for model in aiplatform.Model.list(filter=flt):
                 model.delete()
                 deleted.append(model.resource_name)
+            for job in aiplatform.CustomJob.list(filter=flt):
+                try:
+                    job.delete()
+                    deleted.append(job.resource_name)
+                except Exception as exc:  # noqa: BLE001 - a still-running job cannot be deleted
+                    log.warning("training job %s not deleted: %s", job.resource_name, exc)
         except ImportError:
             log.warning("google-cloud-aiplatform not installed; registry models were not checked")
         return deleted

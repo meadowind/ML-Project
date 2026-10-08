@@ -4,7 +4,7 @@
 PYTHON ?= python
 DATA    ?= $(CURDIR)/data
 
-.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan deploy-batch run-batch-cloud scheduler-run-now scheduler-pause scheduler-resume
+.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan deploy-batch run-batch-cloud scheduler-run-now scheduler-pause scheduler-resume train-image train-cloud fetch-trained
 
 cloud-check:
 	$(PYTHON) scripts/cloud_check.py
@@ -78,3 +78,17 @@ scheduler-pause:
 
 scheduler-resume:
 	gcloud scheduler jobs resume lemon-batch-every-30min --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)"
+
+# --- Training on cloud compute (Vertex AI custom job) -------------------------------------------
+# Build the training image, push it, run `make data` + `make train` in the cloud, wait for it.
+train-image:
+	docker buildx build --platform $(PLATFORM) -f Dockerfile.train --build-arg GIT_COMMIT=$(GIT_COMMIT) -t lemon-train:$(TAG) --load .
+
+train-cloud: train-image
+	$(PYTHON) scripts/train_cloud.py --image lemon-train:$(TAG) $(ARGS)
+
+# Download a cloud run's model into reports/trained/<RUN>, verify hashes, compare with the committed model.
+#   make fetch-trained RUN=train-...            (add ARGS=--adopt to copy it into models/registry)
+fetch-trained:
+	@test -n "$(RUN)" || { echo "Set RUN=<run id printed by make train-cloud>"; exit 1; }
+	$(PYTHON) scripts/fetch_trained.py --run $(RUN) $(ARGS)

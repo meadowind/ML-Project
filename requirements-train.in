@@ -1,0 +1,11 @@
+# Extras for the cloud training image, on top of requirements-runtime.lock (torch CPU, numpy,
+# pillow, opencv). Pins mirror requirements.txt, which produced the committed dataset hash.
+# `make lock-train` resolves these against the runtime lock and merges both into
+# requirements-train.lock (the only file the training image installs).
+datasets==3.3.2
+huggingface-hub>=0.24,<1.0   # datasets 3.3.2 predates huggingface-hub 1.x
+pyarrow>=15,<20              # and the pyarrow releases that dropped its old extension types
+scikit-learn==1.6.1
+pandas==2.2.3
+mlflow
+google-cloud-storage
