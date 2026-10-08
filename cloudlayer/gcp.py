@@ -156,13 +156,51 @@ class GcpAdapter(CloudAdapter):
         lineage["resolved_ref"] = model_ref
         return lineage
 
+    # --- scheduled batch (Cloud Run job + Cloud Scheduler) -----------------------
+    def _gcloud_json(self, *args: str) -> list[dict] | None:
+        """Run a gcloud list command; None when it cannot run (API disabled, no permission)."""
+        proc = subprocess.run(["gcloud", *args, f"--project={self.cfg.project_id}", "--format=json"],
+                              capture_output=True, text=True, check=False)
+        if proc.returncode != 0:
+            log.warning("gcloud %s failed, skipped: %s", " ".join(args[:3]), proc.stderr.strip()[:200])
+            return None
+        return json.loads(proc.stdout or "[]")
+
+    def _teardown_scheduled_batch(self, tags: dict[str, str]) -> list[str]:
+        """Delete the Cloud Scheduler entry and the Cloud Run job that run the batch.
+
+        Cloud Run jobs are matched by labels like everything else. Scheduler entries carry no
+        labels here, so they are matched by the `lemon-batch` name prefix used by
+        infra/setup_cloudrun.sh. A project where either API was never enabled is skipped.
+        """
+        deleted: list[str] = []
+        region = f"--location={self.cfg.region}"
+        schedules = self._gcloud_json("scheduler", "jobs", "list", region)
+        for entry in schedules or []:
+            name = entry["name"]  # projects/<p>/locations/<l>/jobs/<id>
+            if name.rsplit("/", 1)[-1].startswith("lemon-batch"):
+                subprocess.run(["gcloud", "scheduler", "jobs", "delete", name, "--quiet",
+                                f"--project={self.cfg.project_id}", region], check=True)
+                deleted.append(name)
+        jobs = self._gcloud_json("run", "jobs", "list", f"--region={self.cfg.region}")
+        for job in jobs or []:
+            meta = job.get("metadata", {})
+            labels = meta.get("labels") or {}
+            if all(labels.get(k) == v for k, v in tags.items()):
+                subprocess.run(["gcloud", "run", "jobs", "delete", meta["name"], "--quiet",
+                                f"--project={self.cfg.project_id}", f"--region={self.cfg.region}"],
+                               check=True)
+                deleted.append(f"run job {meta['name']}")
+        return deleted
+
     # --- teardown --------------------------------------------------------------
     def teardown(self, tags: dict[str, str]) -> list[str]:
-        """Delete buckets and Artifact Registry repos whose labels include all of `tags`.
+        """Delete the scheduled batch, buckets, Artifact Registry repos and models labelled with all of `tags`.
 
         Deletion is asynchronous on GCP; re-run `make cloud-check`/list and check billing.
         """
         deleted: list[str] = []
+        deleted += self._teardown_scheduled_batch(tags)  # stop the clock before emptying the bucket
         client = self._client()
         for bucket in client.list_buckets():
             labels = bucket.labels or {}
