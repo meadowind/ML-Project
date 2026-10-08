@@ -148,9 +148,148 @@ merged: 6b92682. Two tests fail (`test_status_per_fixture[blurred_leaf.jpg-REJEC
 run, so nothing broken reaches the registry.
 
 ## Monitoring and alerting
-TODO (Member 3): dashboard and alert definitions, the metric names, how to trigger the alert.
-Inputs already produced for it: `summary/<batch>.json` (`rejected_rate`, `low_confidence_rate`,
-`files_total`, `duration_seconds`) and `logs/<batch>.jsonl`.
+
+The scheduled production batch is monitored with **Cloud Logging** and **Cloud Monitoring**. The
+`lemon-batch` Cloud Run Job is started by Cloud Scheduler every 30 minutes.
+
+### Dashboard
+
+The monitoring dashboard is:
+
+* `lemon-batch-monitoring`
+
+It contains four widgets:
+
+1. **Rejected Rate** — rejected file rate for completed batches.
+2. **Low Confidence Rate** — low-confidence rate among scored files.
+3. **Batch Duration** — duration of completed batch processing.
+4. **Successful Batch Executions** — successful `lemon-batch` Cloud Run executions.
+
+### Log-based metrics
+
+The following Cloud Logging metrics are created from `batch_finished` events:
+
+| Metric                            | Meaning                                  |
+| --------------------------------- | ---------------------------------------- |
+| `lemon-batch-rejected-rate`       | Rejected file rate per completed batch   |
+| `lemon-batch-low-confidence-rate` | Low-confidence rate per completed batch  |
+| `lemon-batch-duration-seconds`    | Duration of a completed batch in seconds |
+
+The source filter is the `lemon-batch` Cloud Run Job and the `batch_finished` event.
+
+The rejected-rate and low-confidence-rate metrics are Distribution metrics. Their alert policies
+use `ALIGN_PERCENTILE_50` to convert each batch's distribution value to a scalar before applying
+the threshold.
+
+### Alert policies
+
+Three alert policies are configured:
+
+| Alert policy                            | Trigger                                | Purpose                                             |
+| --------------------------------------- | -------------------------------------- | --------------------------------------------------- |
+| `lemon-batch-rejected-rate-alert`       | Rejected rate >= 10%                   | Detect an abnormal number of rejected files         |
+| `lemon-batch-low-confidence-rate-alert` | Low-confidence rate >= 30%             | Detect batches with unusually uncertain predictions |
+| `lemon-batch-missed-run-alert`          | No successful execution for 60 minutes | Detect missed or failed scheduled executions        |
+
+The rate alerts use `COMPARISON_GT` because the current Cloud Monitoring configuration does not
+support `COMPARISON_GE` for these conditions. The thresholds are therefore configured as `0.099999`
+and `0.299999` to capture the intended 10% and 30% boundaries.
+
+The missed-run alert uses the Cloud Run metric:
+
+```text
+run.googleapis.com/job/completed_execution_count
+```
+
+filtered to:
+
+```text
+metric.labels.result="succeeded"
+```
+
+and triggers when no successful execution is observed for 60 minutes.
+
+A `batch_skipped` event caused by an empty intake directory is still a successful Cloud Run
+execution. Therefore, an empty batch does not trigger the missed-run alert.
+
+### Batch events used for monitoring
+
+Important Cloud Logging events include:
+
+* `batch_started`
+* `model_loaded`
+* `file_scored`
+* `file_rejected`
+* `file_error`
+* `batch_finished`
+* `batch_skipped`
+
+The `batch_finished` event contains the main operational metrics:
+
+* `batch_id`
+* `files_total`
+* `files_scored`
+* `files_rejected`
+* `rejected_rate`
+* `low_confidence_count`
+* `low_confidence_rate`
+* `needs_inspection_count`
+* `duration_seconds`
+
+For detailed investigation, the complete batch summary remains available in:
+
+```text
+gs://lemon-mlops-project-data/lemon/summary/
+```
+
+The summary JSON also contains `confidence_histogram`, `rejected_samples`, and `by_status`, which
+are not included in the `batch_finished` log event.
+
+### Useful monitoring commands
+
+View completed batch events:
+
+```bash
+gcloud logging read \
+  'resource.type="cloud_run_job" AND resource.labels.job_name="lemon-batch" AND jsonPayload.event="batch_finished"' \
+  --project=lemon-mlops-project \
+  --limit=20
+```
+
+View skipped executions:
+
+```bash
+gcloud logging read \
+  'resource.type="cloud_run_job" AND resource.labels.job_name="lemon-batch" AND jsonPayload.event="batch_skipped"' \
+  --project=lemon-mlops-project \
+  --limit=20
+```
+
+List alert policies:
+
+```bash
+gcloud monitoring policies list \
+  --project=lemon-mlops-project
+```
+
+### Monitoring resources
+
+All monitoring resources created for this project use the `lemon-` prefix:
+
+```text
+lemon-batch-rejected-rate
+lemon-batch-low-confidence-rate
+lemon-batch-duration-seconds
+
+lemon-batch-monitoring
+
+lemon-batch-rejected-rate-alert
+lemon-batch-low-confidence-rate-alert
+lemon-batch-missed-run-alert
+```
+
+These resources should be removed during teardown when they are no longer required.
+
 
 ## The failure we designed for
 
