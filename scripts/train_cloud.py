@@ -11,6 +11,7 @@ CloudAdapter only.
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,13 +28,20 @@ def main(argv: list[str] | None = None) -> int:
     from src import config
 
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--image", required=True, help="locally built training image, e.g. lemon-train:abc1234")
+    ap.add_argument("--image", help="locally built training image, e.g. lemon-train:abc1234")
+    ap.add_argument("--wait", metavar="JOB", help="only wait for this already-submitted job (resource name)")
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--machine-type", default=None)
     ap.add_argument("--no-wait", action="store_true", help="submit and return immediately")
     args = ap.parse_args(argv)
 
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     adapter = get_adapter(config.load())
+    if args.wait:
+        print(adapter.wait_training(args.wait), flush=True)
+        return 0
+    if not args.image:
+        ap.error("--image is required unless --wait is given")
     run_id = args.run_id or new_run_id()
     image_ref = adapter.push_image(args.image)
     print(f"training image: {image_ref}", flush=True)

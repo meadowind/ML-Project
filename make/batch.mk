@@ -4,7 +4,7 @@
 PYTHON ?= python
 DATA    ?= $(CURDIR)/data
 
-.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan deploy-batch run-batch-cloud scheduler-run-now scheduler-pause scheduler-resume train-image train-cloud fetch-trained
+.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan deploy-batch run-batch-cloud scheduler-run-now scheduler-pause scheduler-resume train-image train-cloud train-wait fetch-trained
 
 cloud-check:
 	$(PYTHON) scripts/cloud_check.py
@@ -86,6 +86,11 @@ train-image:
 
 train-cloud: train-image
 	$(PYTHON) scripts/train_cloud.py --image lemon-train:$(TAG) $(ARGS)
+
+# Wait for a job that is already running (the resource name `make train-cloud` printed).
+train-wait:
+	@test -n "$(JOB)" || { echo "Set JOB=projects/.../customJobs/<id>"; exit 1; }
+	$(PYTHON) scripts/train_cloud.py --wait "$(JOB)"
 
 # Download a cloud run's model into reports/trained/<RUN>, verify hashes, compare with the committed model.
 #   make fetch-trained RUN=train-...            (add ARGS=--adopt to copy it into models/registry)
