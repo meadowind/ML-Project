@@ -13,6 +13,8 @@ import json
 import logging
 import re
 import subprocess
+import time
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -26,6 +28,36 @@ _LABEL_BAD = re.compile(r"[^a-z0-9_-]")
 def _label_value(value: object) -> str:
     """GCP label values: lowercase letters, digits, '_' and '-', at most 63 chars."""
     return _LABEL_BAD.sub("_", str(value).lower())[:63]
+
+
+FINAL_JOB_STATES = ("JOB_STATE_SUCCEEDED", "JOB_STATE_FAILED", "JOB_STATE_CANCELLED", "JOB_STATE_EXPIRED")
+
+
+def wait_for_final_state(
+    fetch: Callable[[], tuple[str, str]],
+    poll_seconds: float = 30,
+    timeout_seconds: float = 4 * 3600,
+    sleep: Callable[[float], None] = time.sleep,
+    clock: Callable[[], float] = time.monotonic,
+) -> str:
+    """Poll `fetch() -> (state, error text)` until the job is final; raise unless it succeeded.
+
+    The SDK's own `wait()` returns as soon as a submitted job exists, so we poll ourselves.
+    """
+    deadline = clock() + timeout_seconds
+    last = None
+    while True:
+        state, error = fetch()
+        if state != last:
+            log.info("training job state: %s", state)
+            last = state
+        if state in FINAL_JOB_STATES:
+            if state != "JOB_STATE_SUCCEEDED":
+                raise RuntimeError(f"training job ended in {state}: {error or 'see the job logs'}")
+            return state
+        if clock() > deadline:
+            raise TimeoutError(f"training job still {state} after {timeout_seconds:.0f}s (it keeps running)")
+        sleep(poll_seconds)
 
 
 def _storage():
@@ -200,12 +232,16 @@ class GcpAdapter(CloudAdapter):
         job.submit(service_account=self.cfg.identity_ref or None)
         return job.resource_name
 
-    def wait_training(self, job_id: str) -> dict:
-        """Block until the job ends; raises if it failed (the SDK raises with the job's error)."""
+    def wait_training(self, job_id: str, poll_seconds: float = 30, timeout_seconds: float = 4 * 3600) -> dict:
+        """Block until the job reaches a final state; raises if it failed or the wait timed out."""
         aiplatform = self._aiplatform()
-        job = aiplatform.CustomJob.get(job_id)
-        job.wait()
-        return {"job": job.resource_name, "state": job.state.name}
+
+        def fetch() -> tuple[str, str]:
+            job = aiplatform.CustomJob.get(job_id)
+            return job.state.name, str(getattr(job.error, "message", "") or "")
+
+        state = wait_for_final_state(fetch, poll_seconds, timeout_seconds)
+        return {"job": job_id, "state": state}
 
     # --- scheduled batch (Cloud Run job + Cloud Scheduler) -----------------------
     def _gcloud_json(self, *args: str) -> list[dict] | None:
