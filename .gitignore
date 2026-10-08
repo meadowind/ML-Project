@@ -25,3 +25,7 @@ reports/repro/
 data/_local_blob/
 data_demo_*/
 failure_photos/
+
+# local copies of cloud-trained models
+reports/trained/
+.DS_Store

@@ -27,28 +27,28 @@
 - Total: 1,354 images across 9 classes
 
 ## Test Evaluation Metrics (Held-Out Test Set, 204 images)
-- **Accuracy:** 96.1% (196 / 204)
-- **Macro F1 Score:** 0.961
-- **Best validation accuracy** (used to pick the saved epoch; the test set was not used for selection): 95.6%
-- **Clean Test Images with Confidence < 0.60:** 1.47% (baseline for the 30% low-confidence alert threshold)
+- **Accuracy:** 95.1% (194 / 204)
+- **Macro F1 Score:** 0.953
+- **Best validation accuracy** (used to pick the saved epoch; the test set was not used for selection): 96.1%
+- **Clean Test Images with Confidence < 0.60:** 0.49% (baseline for the 30% low-confidence alert threshold)
 - **Validator False-Reject Rate:** 0.00% across clean training and validation sets
 
 | Class | Recall (test) |
 |---|---|
 | Anthracnose | 1.000 |
-| Bacterial_Blight | 1.000 |
+| Bacterial_Blight | 0.875 |
 | Citrus_Canker | 1.000 |
-| Curl_Virus | 0.941 |
-| Deficiency_Leaf | 0.897 |
+| Curl_Virus | 0.882 |
+| Deficiency_Leaf | 1.000 |
 | Dry_Leaf | 1.000 |
 | Healthy_Leaf | 1.000 |
-| Sooty_Mould | 0.826 |
-| Spider_Mites | 1.000 |
+| Sooty_Mould | 0.783 |
+| Spider_Mites | 0.941 |
 
 With 204 test images, one image is about 0.5 percentage points: differences of a point or two between runs are within noise.
 
 ## Reproducibility
-Seed, data revision and data hash are pinned, and each run is recorded in MLflow (run id stored in the manifest and in the registry lineage). Results are reproducible **for the same PyTorch version**. Retraining the same data and seed under a different PyTorch version gave different numbers: the earlier v2.0.0 model, trained under PyTorch 2.14.0, scored 94.1% accuracy / 0.943 macro F1 on the same test set (identical data hash); the current model, trained under 2.6.0, scores 96.1% / 0.961 (Curl_Virus and Spider_Mites recall improved, Deficiency_Leaf dropped from 0.931 to 0.897, Sooty_Mould unchanged at 0.826). It was adopted because the data was identical, the aggregate metrics did not get worse, and its training version matches the serving image.
+Seed, data revision and data hash are pinned, and each run is recorded in MLflow (run id stored in the manifest and in the registry lineage). The current model was trained on a Vertex AI custom job (CPU, `torch 2.6.0+cpu`, training image pinned by digest; the digest, job id and run id are in the manifest and the registry lineage), from the same data hash as every earlier model. Results depend on the PyTorch version: the first v2.0.0 model, trained locally under PyTorch 2.14.0, scored 94.1% accuracy / 0.943 macro F1 on this test set. Retraining under 2.6.0 on a laptop gave 96.1% / 0.961, and the cloud job under the same version gave 95.1% / 0.953 (2 images fewer correct; different CPU and thread scheduling are enough to change a few predictions). We adopted the cloud-trained model because its lineage is fully recorded (image digest, job, data hash), its validation accuracy is higher (96.1% vs 95.6%) and the test difference is within the noise noted above. Do not expect bit-identical models from two machines; expect the same data hash and metrics within about a point or two.
 
 ## Input Validation Guardrails
 Pre-inference screening via `InputValidator` (`src/model/validator.py`):
@@ -58,7 +58,7 @@ Pre-inference screening via `InputValidator` (`src/model/validator.py`):
 4. **Toggles:** Supports `enable_blur_check` and `enable_ood_check` flags for deliberate failure demonstration.
 
 ## Limitations & Risks
-- **Diseased leaves can be called Healthy, confidently.** Sooty_Mould recall is 0.826 (4 of 23 test leaves missed) and Deficiency_Leaf 0.897. In the live deployment, `test_Sooty_Mould_0017.jpg` was predicted *Healthy_Leaf* with confidence 0.98 — sharp photo, plenty of foliage, so no guardrail fired. The 0.60 confidence threshold cannot catch this kind of error; a manager should treat "Healthy" as "not flagged", and occasional spot checks are still needed.
+- **Diseased leaves can be called Healthy, confidently.** On the test set 9 of the 10 errors are diseased leaves predicted *Healthy_Leaf*: 5 of 23 Sooty_Mould (recall 0.783), 2 of 16 Bacterial_Blight and 2 of 17 Curl_Virus. Because of this, 22% of the leaves the model calls Healthy are actually diseased (Healthy precision 32/41). In the live deployment, `test_Sooty_Mould_0017.jpg` was predicted *Healthy_Leaf* with confidence 0.98 by the previous model — sharp photo, plenty of foliage, so no guardrail fired. The 0.60 confidence threshold cannot catch this kind of error; a manager should treat "Healthy" as "not flagged", and occasional spot checks are still needed.
 - **Single Source:** Dataset reflects curated AgML collection conditions rather than diverse orchard camera angles.
 - **Class Imbalance:** Training samples range from 70 images (Anthracnose) to 147 images (Healthy Leaf).
 - **OOD Sensitivity:** Standard softmax layers exhibit overconfidence on non-leaf images unless guarded by `InputValidator`.
