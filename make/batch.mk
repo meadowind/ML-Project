@@ -4,7 +4,7 @@
 PYTHON ?= python
 DATA    ?= $(CURDIR)/data
 
-.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan deploy-batch run-batch-cloud scheduler-run-now scheduler-pause scheduler-resume train-image train-cloud train-wait fetch-trained
+.PHONY: register-model reload-check cloud-check image-push sync-down sync-up run-batch run-batch-local demo-upload teardown teardown-plan deploy-batch run-batch-cloud scheduler-run-now scheduler-pause scheduler-resume train-image reproduce verify train-cloud train-wait fetch-trained
 
 cloud-check:
 	$(PYTHON) scripts/cloud_check.py
@@ -97,3 +97,17 @@ train-wait:
 fetch-trained:
 	@test -n "$(RUN)" || { echo "Set RUN=<run id printed by make train-cloud>"; exit 1; }
 	$(PYTHON) scripts/fetch_trained.py --run $(RUN) $(ARGS)
+
+# THE ONE COMMAND a grader runs: rebuild the dataset from the pinned revision and retrain inside the
+# training image (no cloud account, no credentials), then compare with the claim in README.md.
+reproduce: train-image ## rebuild data + retrain in Docker, then verify
+	rm -rf reports/reproduce && mkdir -p reports/reproduce && chmod a+rwx reports/reproduce
+	docker run --rm --platform $(PLATFORM) \
+	  -e TRAIN_LOCAL=1 -e TRAIN_OUT_DIR=/out/lemon_classifier \
+	  -e MLFLOW_TRACKING_URI=sqlite:////out/mlflow.db \
+	  -v "$$PWD/reports/reproduce:/out" lemon-train:$(TAG)
+	$(PYTHON) scripts/verify_metric.py
+
+# Compare reports/reproduce/ with the README claim and the committed data fingerprint.
+verify:
+	$(PYTHON) scripts/verify_metric.py

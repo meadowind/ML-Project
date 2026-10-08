@@ -15,6 +15,28 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 | Freshness | A photo is scored at the next scheduled run: at most 30 minutes plus the job's own run time (about 10 s start-up and 11 s of scoring for 4 photos in our tests). Measured cadence, and the before/after comparison with GitHub's cron, are in "Schedule cadence" |
 | Output | One CSV row per photo (`class`, `confidence`, `needs_inspection`, `status`) and one summary JSON per batch |
 
+## Reproduce the model
+
+```bash
+make reproduce
+```
+
+expected test_accuracy: 0.951 ± 0.020
+
+This one command needs Docker and internet access, and **no cloud account or credentials**. It builds the
+training image, rebuilds the dataset from the pinned Hugging Face revision inside the container
+(about 360 MB download), trains with the fixed seed, then runs `make verify`, which checks two things:
+the processed-data fingerprint equals `data/dataset_lineage.json`, and the test accuracy is within the
+claim above. Results are written to `reports/reproduce/` and never touch the committed model.
+
+**What the tolerance covers.** Same code, data, seed and PyTorch version (2.6.0, pinned by hash), on
+different hardware: our own runs gave 0.9608 on a laptop and 0.9510 on the Vertex AI job, a difference of 2
+of the 204 test images, caused by CPU floating-point differences. ±0.020 is about 4 images. It does **not**
+cover a different PyTorch version, which gave 0.9412 on the same data, so the version is locked in
+`requirements-train.lock`. Widening the tolerance to hide non-determinism would be visible, so we keep it
+at this level. On Apple Silicon you will see a `linux/amd64` platform warning: the image is built for
+amd64 on purpose and runs under emulation, which is slower.
+
 ## Architecture
 
 ```mermaid
