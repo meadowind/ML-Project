@@ -1,7 +1,7 @@
-# Model Card: Lemon Leaf Disease Classifier (v2.0.0)
+# Model Card: Lemon Leaf Disease Classifier (v2.1.0)
 
 ## Model Details
-- **Model Version:** v2.0.0
+- **Model Version:** v2.1.0 (v2.0.0 was the same architecture and data trained locally under PyTorch 2.14.0; v2.1.0 is the cloud-trained one)
 - **Training Date:** October 2026
 - **Architecture:** MobileNetV3-Small (Transfer Learning), 9 classes
 - **Deployment Format:** TorchScript CPU Artifact (`model.torchscript.pt`) with `model_manifest.json`
@@ -48,7 +48,7 @@
 With 204 test images, one image is about 0.5 percentage points: differences of a point or two between runs are within noise.
 
 ## Reproducibility
-Seed, data revision and data hash are pinned, and each run is recorded in MLflow (run id stored in the manifest and in the registry lineage). The current model was trained on a Vertex AI custom job (CPU, `torch 2.6.0+cpu`, training image pinned by digest; the digest, job id and run id are in the manifest and the registry lineage), from the same data hash as every earlier model. Results depend on the PyTorch version: the first v2.0.0 model, trained locally under PyTorch 2.14.0, scored 94.1% accuracy / 0.943 macro F1 on this test set. Retraining under 2.6.0 on a laptop gave 96.1% / 0.961, and the cloud job under the same version gave 95.1% / 0.953 (2 images fewer correct; different CPU and thread scheduling are enough to change a few predictions). We adopted the cloud-trained model because its lineage is fully recorded (image digest, job, data hash), its validation accuracy is higher (96.1% vs 95.6%) and the test difference is within the noise noted above. Do not expect bit-identical models from two machines; expect the same data hash and metrics within about a point or two.
+Seed, data revision and data hash are pinned, and each run is recorded in MLflow (run id stored in the manifest and in the registry lineage). The current model was trained on a Vertex AI custom job (CPU, `torch 2.6.0+cpu`, training image pinned by digest; the digest, job id and run id are in the manifest and the registry lineage), from the same data hash as every earlier model. Results depend on the PyTorch version: the earlier v2.0.0 model, trained locally under PyTorch 2.14.0, scored 94.1% accuracy / 0.943 macro F1 on this test set. Retraining under 2.6.0 on a laptop gave 96.1% / 0.961, and the cloud job under the same version gave 95.1% / 0.953 (2 images fewer correct; different CPU and thread scheduling are enough to change a few predictions). We adopted the cloud-trained model because its lineage is fully recorded (image digest, job, data hash), its validation accuracy is higher (96.1% vs 95.6%) and the test difference is within the noise noted above. Do not expect bit-identical models from two machines; expect the same data hash and metrics within about a point or two.
 
 ## Input Validation Guardrails
 Pre-inference screening via `InputValidator` (`src/model/validator.py`):

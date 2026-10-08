@@ -23,7 +23,7 @@ that the schedule itself is alive, look at the GitHub Actions run history of the
 {
   "batch_id": "batch-20261007T133147Z",
   "finished_at": "2026-10-07T13:31:50Z",
-  "model_version": "v2.0.0",
+  "model_version": "v2.1.0",
   "files_total": 7,
   "files_scored": 7,
   "files_rejected": 0,

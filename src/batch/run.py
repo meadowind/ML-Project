@@ -127,7 +127,8 @@ def process_file(path: Path, comp: Components, batch_id: str, archive: Path,
 
         cls, conf = comp.predict(image)
         _copy(path, archive)
-        needs = cls != HEALTHY_CLASS
+        # Contract (docs/DATA_CONTRACT.md): not Healthy, OR too unsure to trust a 'Healthy'.
+        needs = cls != HEALTHY_CLASS or conf < LOW_CONFIDENCE
         log.emit("file_scored", filename=path.name, predicted_class=cls,
                  confidence=round(conf, 4), needs_inspection=needs)
         return _row(batch_id, path.name, "SCORED", predicted_class=cls,

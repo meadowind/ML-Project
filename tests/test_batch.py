@@ -104,7 +104,32 @@ def test_low_confidence_rate_uses_scored_files_as_denominator(dirs, put, comp):
     comp.predict = lambda _i: ("Healthy_Leaf", 0.40)
     s = go(dirs, comp, batch_id="b1")
     assert s["low_confidence_rate"] == 1.0          # 1 of 1 scored, not 1 of 2
-    assert s["needs_inspection_count"] == 0         # healthy leaf
+    assert s["needs_inspection_count"] == 1         # unsure "Healthy" is flagged, not trusted
+
+
+def test_needs_inspection_follows_the_contract(dirs, put, comp):
+    """Found live: a Sooty_Mould leaf scored Healthy at 0.54 was NOT flagged."""
+    put("good_leaf.jpg", as_name="sure_healthy.jpg")
+    put("good_leaf.jpg", as_name="unsure_healthy.jpg")
+    put("good_leaf.jpg", as_name="sick.jpg")
+    answers = {"sure_healthy.jpg": ("Healthy_Leaf", 0.99),
+               "unsure_healthy.jpg": ("Healthy_Leaf", 0.5447),
+               "sick.jpg": ("Sooty_Mould", 1.0)}
+    comp.predict = lambda img: answers[img_name[0]]
+    img_name = [""]
+    orig_validate = comp.validate
+
+    def validate(path):
+        img_name[0] = path.name
+        return orig_validate(path)
+
+    comp.validate = validate
+    s = go(dirs, comp, batch_id="b1")
+    r = rows(dirs, "b1")
+    assert r["sure_healthy.jpg"]["needs_inspection"] == "false"
+    assert r["unsure_healthy.jpg"]["needs_inspection"] == "true"
+    assert r["sick.jpg"]["needs_inspection"] == "true"
+    assert s["needs_inspection_count"] == 2
 
 
 def test_summary_and_log_are_written_and_carry_batch_id(dirs, put, comp, capsys):
