@@ -430,6 +430,9 @@ only checked the class, and an existing test had the same mistake written into i
 `tests/test_batch.py::test_needs_inspection_follows_the_contract` now covers a sure Healthy, an unsure
 Healthy and a diseased leaf.
 
+## Evidence
+Screenshots of the live deployment (Vertex training job, model registry lineage, MLflow run, `make reproduce`, registry digests, Cloud Run executions, Cloud Scheduler, a CI failure, a manual batch run) are indexed with captions in [`docs/evidence/`](docs/evidence/README.md).
+
 ## Model card and limits
 See `docs/MODEL_CARD.md`. In short: single-source dataset; class imbalance; some diseased
 leaves (Sooty_Mould recall 0.78; 9 of the 10 test errors are diseased leaves called Healthy) are predicted *Healthy*, sometimes confidently, and would not be
