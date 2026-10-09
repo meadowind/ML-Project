@@ -14,9 +14,12 @@ Everything lives under one prefix in the project bucket: `gs://<project>-data/le
 
 `batch_id` looks like `batch-20261007T133147Z` (UTC start time) and appears in every row, summary and log line.
 
-**A run with no new photos writes nothing** (no summary, no log): the job logs `batch_skipped` on the
-runner and exits. So "no summary for a while" means "no new photos", not "the job is broken". To check
-that the schedule itself is alive, look at the GitHub Actions run history of the `batch` workflow.
+**A run with no new photos writes nothing** (no summary, no log in the bucket): the job logs
+`batch_skipped` to its own output (Cloud Logging) and exits. So "no summary for a while" means "no new
+photos", not "the job is broken". To check that the schedule itself is alive, look at the executions of
+the Cloud Run job `lemon-batch` (`gcloud run jobs executions list --job lemon-batch --region
+asia-southeast1`) or at the Cloud Scheduler entry `lemon-batch-every-30min`: an execution exists every 30
+minutes whether or not any photo was scored.
 
 ## `summary/<batch_id>.json`
 ```json
@@ -42,7 +45,7 @@ that the schedule itself is alive, look at the GitHub Actions run history of the
 - `low_confidence_rate` = `low_confidence_count / files_scored` — the denominator is **scored** files only, because a rejected file has no confidence.
 - `rejected_samples`: up to 5 rejected files, sorted by name, for naming examples in an alert. Includes `ERROR_UNEXPECTED`.
 - `confidence_histogram`: scored files only, ten bins of width 0.1 (all ten keys always present; a confidence of exactly 1.0 counts in `0.9-1.0`). The counts sum to `files_scored`.
-- `needs_inspection_count`: scored files whose predicted class is not `Healthy_Leaf` or whose confidence is below 0.6.
+- `needs_inspection_count`: scored files whose predicted class is not `Healthy_Leaf` or whose confidence is below 0.6 (a "Healthy" the model is unsure about is flagged too).
 
 ## `results/<batch_id>.csv`
 Columns, in order: `batch_id, filename, status, predicted_class, confidence, needs_inspection,
@@ -54,12 +57,16 @@ model_version, blur_score, foliage_ratio, rejection_reason, processed_at`.
 
 ## `logs/<batch_id>.jsonl`
 Events (`event` field): `batch_started`, `model_loaded`, `file_scored`, `file_rejected`, `file_error`,
-`batch_finished` (carries the summary numbers), `batch_skipped` (runner output only, never uploaded).
-Every line has `ts` and `batch_id`.
+`batch_finished` (carries the summary numbers), `batch_skipped` (job output only, never uploaded).
+Every line has `ts` and `batch_id`. Every event is also printed to the job's standard output, so it appears
+in Cloud Logging under the Cloud Run job `lemon-batch`, including `batch_skipped`.
 
 ## Alert rules from the proposal (initial thresholds)
 - fire when `rejected_rate >= 0.10` **or** `low_confidence_rate >= 0.30`;
-- the message names the `batch_id`, the error count (`files_rejected`) and sample filenames (`rejected_samples`).
+- the message names the `batch_id`, the error count (`files_rejected`) and sample filenames (`rejected_samples`);
+- **missed run** (a health signal, not a data signal): no successful execution of the Cloud Run job
+  `lemon-batch` for about 45–60 minutes. It must be based on job executions, not on summaries, because a
+  run with no new photos writes none.
 
 Known limit worth showing on the dashboard: the classifier is often **confident on non-leaf photos**
 (see README, "The failure we designed for"), which is why a confidence alert alone is not enough and
