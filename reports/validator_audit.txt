@@ -1,0 +1,16 @@
+
+--- VALIDATOR FALSE REJECTION AUDIT ---
+Class                  | Total  | Rejected | False Reject Rate
+-------------------------------------------------------
+Anthracnose            | 85     | 0        |   0.00%
+Bacterial_Blight       | 89     | 0        |   0.00%
+Citrus_Canker          | 151    | 0        |   0.00%
+Curl_Virus             | 98     | 0        |   0.00%
+Deficiency_Leaf        | 164    | 0        |   0.00%
+Dry_Leaf               | 158    | 0        |   0.00%
+Healthy_Leaf           | 178    | 0        |   0.00%
+Sooty_Mould            | 130    | 0        |   0.00%
+Spider_Mites           | 97     | 0        |   0.00%
+-------------------------------------------------------
+Overall False-Reject Rate: 0/1150 (0.00%)
+
