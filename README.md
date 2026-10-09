@@ -86,14 +86,14 @@ client (hash-locked in `requirements-cloud.lock`); the portability rule is that 
   | | GitHub Actions cron (before) | Cloud Scheduler → Cloud Run job (after) |
   |---|---|---|
   | Configured | every 30 min | every 30 min |
-  | Observed gaps between runs | 4 h 14 m 25 s and 4 h 33 m 54 s | 30 m 03 s, 30 m 00 s, 30 m 00 s |
-  | Start vs the scheduled minute | hours late (3 runs in 8 h 48 m, about 17 expected) | 1–4 s after the minute |
+  | Observed gaps between runs | 4 h 14 m 25 s and 4 h 33 m 54 s | 29 m 56 s to 30 m 04 s, over 34 consecutive gaps |
+  | Start vs the scheduled minute | hours late (3 runs in 8 h 48 m, about 17 expected) | 0–7 s after the minute |
   | Worst-case wait for a new photo | more than 4 h 30 m | 30 min + job run time |
 
-  "After" is the first four consecutive scheduler executions (13:30:01, 14:00:04, 14:30:04 and 15:00:04 UTC;
-  see `gcloud run jobs executions list --job lemon-batch`). The GitHub workflow is now manual only
-  (`workflow_dispatch`), for replays and the failure demo. A run that finds no new photos writes no
-  summary and does not load the model.
+  "After" is 35 consecutive scheduler executions, from 13:30:01 UTC on 8 Oct to 06:30:05 UTC on 9 Oct
+  (17 hours, no run missing; `gcloud run jobs executions list --job lemon-batch` lists them). The GitHub
+  workflow is now manual only (`workflow_dispatch`), for replays and the failure demo. A run that finds no
+  new photos writes no summary and does not load the model.
 
 ## Quick start (clean clone)
 
@@ -417,8 +417,8 @@ A second batch (`batch-20261007T192733Z`) was picked up without anyone pressing 
 step because GitHub's OIDC token service returned HTTP 500; nothing had been written, and the next run
 processed the same photos. The runs came 4–5 hours apart, which is why the schedule moved to Cloud Scheduler.
 
-**On Cloud Scheduler + Cloud Run (current).** Scheduler executions started 1–4 s after the minute, every
-30 minutes. A manual execution scored a newly uploaded photo and wrote its summary. After the cloud-trained
+**On Cloud Scheduler + Cloud Run (current).** Scheduler executions started 0–7 s after the minute, every
+30 minutes, 35 times in a row without a gap. A manual execution scored a newly uploaded photo and wrote its summary. After the cloud-trained
 model (`v2.1.0`) was deployed, 4 new photos (3 *Sooty_Mould*, 1 *Bacterial_Blight*) were scored in 11 s
 and all four were flagged.
 
