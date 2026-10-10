@@ -343,6 +343,50 @@ gcloud monitoring policies list \
   --project=lemon-mlops-project
 ```
 
+### Monitoring validation and evidence
+
+The monitoring setup was validated using a controlled batch of test images and a
+scheduled-run interruption test.
+
+#### Controlled batch test
+
+Batch ID: `batch-20261009T090020Z`
+
+| Measurement | Observed result |
+| --- | ---: |
+| Files processed | 10 |
+| Files scored | 6 |
+| Files rejected | 4 |
+| Rejected rate | 40% |
+| Low-confidence rate | 100% |
+| Batch duration | 21.09 seconds |
+
+Both rate thresholds were exceeded, and the corresponding Cloud Monitoring
+incidents were observed.
+
+#### Missed-run detection and recovery
+
+The missed-run policy generated an incident after no successful execution was
+observed for more than 60 minutes while the scheduler was paused for testing.
+The scheduler was subsequently re-enabled, and a later Cloud Run execution
+completed successfully.
+
+#### Screenshots
+
+Evidence captured during validation:
+
+- Dashboard overview: [dashboard-overview.png](evidence/dashboard-overview.png)
+- Rejected-rate incident: [rejected-rate-alert.png](evidence/rejected-rate-alert.png)
+- Low-confidence incident: [low-confidence-alert.png](evidence/low-confidence-alert.png)
+- Missed-run incident: [missed-run-alert-incident.png](evidence/missed-run-alert-incident.png)
+- Missed-run metric baseline: [missed-run-metric-baseline.png](evidence/missed-run-metric-baseline.png)
+- Scheduler recovery: [scheduler-resume-success.png](evidence/scheduler-resume-success.png)
+- Scheduler recovery (WSL capture): [scheduler-resume-success-wsl.png](evidence/scheduler-resume-success-wsl.png)
+
+These tests verify Cloud Monitoring incident generation and scheduler recovery.
+Delivery of alert messages to Discord is a separate integration and must be
+verified independently.
+
 ### Monitoring resources
 
 All monitoring resources created for this project use the `lemon-` prefix:
