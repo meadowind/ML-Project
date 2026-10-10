@@ -259,18 +259,32 @@ After the command completes:
 If the execution fails again, stop retrying and escalate with the
 execution name and relevant error logs.
 
-## 8. Alerting and notification limitations
+## 8. Alerting and notification verification
 
-Cloud Monitoring incident creation and external notification delivery
-are separate checks.
+Cloud Monitoring incident creation and email notification delivery are
+separate checks. For this project, the low-confidence, rejected-rate,
+and missed-run alert policies were each verified by receiving an email
+notification. Do not claim Discord delivery based on these email tests.
 
-The project's controlled validation observed Cloud Monitoring
-incidents for rejected-rate, low-confidence, and missed-run conditions.
-Discord delivery must be tested independently before it can be
-considered operational.
+### Controlled missed-run test and recovery (October 2026)
 
-Do not report an alert as successfully delivered to Discord based only
-on an incident appearing in Cloud Monitoring.
+- The `lemon-batch-missed-run-alert` policy fired after no successful
+  execution was observed for more than 60 minutes, and its email
+  notification was received.
+- Cloud Scheduler `lemon-batch-every-30min` was resumed by an authorized
+  team account and verified as `ENABLED` with schedule `*/30 * * * *`
+  in UTC.
+- The subsequent Cloud Run Job execution `lemon-batch-8kkt8`, created
+  at `2026-10-10 18:30:02 UTC`, completed successfully with 1 of 1 task
+  completed. The reported execution duration was 12.37 seconds.
+- After recovery, the Cloud Monitoring Alerts table displayed
+  `No rows to display`.
+
+These observations confirm that the scheduled job ran successfully after
+resume and that no alert rows were displayed at the time of the check.
+If this runbook is reused for a future incident, verify the current
+incident state rather than assuming that the alert will always clear
+within a fixed time.
 
 ## 9. Incident record
 
