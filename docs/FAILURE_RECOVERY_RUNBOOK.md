@@ -263,8 +263,7 @@ execution name and relevant error logs.
 
 Cloud Monitoring incident creation and email notification delivery are
 separate checks. For this project, the low-confidence, rejected-rate,
-and missed-run alert policies were each verified by receiving an email
-notification. Do not claim Discord delivery based on these email tests.
+and missed-run alert policies were each verified by receiving an email.
 
 ### Controlled missed-run test and recovery (October 2026)
 
