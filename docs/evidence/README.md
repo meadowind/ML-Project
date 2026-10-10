@@ -16,7 +16,6 @@ on 9 Oct 2026. Console times are Thailand time (UTC+7); times in the README are 
 | 8 | `08-cloud-scheduler.png` | Cloud Scheduler `lemon-batch-every-30min`: Enabled, `*/30 * * * *` (UTC), target is the `lemon-batch` job. "Last run" 16:02 was started by hand | README, cadence table |
 | 9 | `09-ci-fail-tests.png` | CI on the deliberately broken commit `6b92682` (blur cutoff 0): 2 failed, 32 passed; `build` and publish did not run | README, "CI/CD" (CI blocks a bad commit) |
 | 10 | `10-actions-batch-success.png` | Manual `batch.yml` run on the cloud-trained model (`v2.1.0`): 1 photo scored, summary JSON | README, "What the live deployment showed" |
-
 | 11 | `11-dashboard-overview.png` | Cloud Monitoring dashboard overview | Monitoring evidence |
 | 12 | `12-rejected-rate-alert.png` | Rejected-rate alert incident | Monitoring evidence |
 | 13 | `13-low-confidence-alert.png` | Low-confidence alert incident | Monitoring evidence |
