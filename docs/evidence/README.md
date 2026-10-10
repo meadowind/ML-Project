@@ -17,6 +17,14 @@ on 9 Oct 2026. Console times are Thailand time (UTC+7); times in the README are 
 | 9 | `09-ci-fail-tests.png` | CI on the deliberately broken commit `6b92682` (blur cutoff 0): 2 failed, 32 passed; `build` and publish did not run | README, "CI/CD" (CI blocks a bad commit) |
 | 10 | `10-actions-batch-success.png` | Manual `batch.yml` run on the cloud-trained model (`v2.1.0`): 1 photo scored, summary JSON | README, "What the live deployment showed" |
 
+| 11 | `11-dashboard-overview.png` | Cloud Monitoring dashboard overview | Monitoring evidence |
+| 12 | `12-rejected-rate-alert.png` | Rejected-rate alert incident | Monitoring evidence |
+| 13 | `13-low-confidence-alert.png` | Low-confidence alert incident | Monitoring evidence |
+| 14 | `14-missed-run-alert-incident.png` | Missed-run alert incident screenshot | Monitoring evidence; pending team confirmation |
+| 15 | `15-missed-run-metric-baseline.png` | Baseline for the missed-run monitoring metric | Monitoring evidence |
+| 16 | `16-scheduler-resume-success.png` | Scheduler resume success in the console | Recovery evidence |
+| 16b | `16b-scheduler-resume-success-wsl.png` | Scheduler resume success from WSL | Recovery evidence |
+
 ## Things a reader may wonder about
 
 - **The MLflow run is named `v2.0.0`.** The cloud job ran before the version bump to `v2.1.0`, and the run name is taken from
