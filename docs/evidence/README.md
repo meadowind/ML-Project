@@ -19,7 +19,7 @@ on 9 Oct 2026. Console times are Thailand time (UTC+7); times in the README are 
 | 11 | `11-dashboard-overview.png` | Cloud Monitoring dashboard overview | Monitoring evidence |
 | 12 | `12-rejected-rate-alert.png` | Rejected-rate alert incident | Monitoring evidence |
 | 13 | `13-low-confidence-alert.png` | Low-confidence alert incident | Monitoring evidence |
-| 14 | `14-missed-run-alert-incident.png` | Missed-run alert incident screenshot | Monitoring evidence; pending team confirmation |
+| 14 | `14-missed-run-alert-incident.png` | Missed-run alert incident; notification received at 1:06:11 AM ICT | Monitoring evidence |
 | 15 | `15-missed-run-metric-baseline.png` | Baseline for the missed-run monitoring metric | Monitoring evidence |
 | 16 | `16-scheduler-resume-success.png` | Scheduler resume success in the console | Recovery evidence |
 | 16b | `16b-scheduler-resume-success-wsl.png` | Scheduler resume success from WSL | Recovery evidence |
@@ -29,7 +29,7 @@ on 9 Oct 2026. Console times are Thailand time (UTC+7); times in the README are 
 | 20 | `20-low-confidence-alert-email.png` | Email notification received for the low-confidence alert | Alerting evidence |
 | 21 | `21-missed-run-alert-email.png` | Email notification received for the missed-run alert | Alerting evidence |
 | 22 | `22-post-recovery-job-success.png` | Cloud Run execution `lemon-batch-8kkt8` completed successfully after recovery | Recovery evidence |
-| 23 | `23-missed-run-alert-cleared-after-recovery.png` | Screenshot documenting the missed-run alert state after recovery; see screenshot for the actual displayed status | Recovery evidence |
+| 23 | `23-missed-run-alert-cleared-after-recovery.png` | Policy details for `lemon-batch-missed-run-alert`; no incident was listed in the Alerts panel at capture time | Recovery evidence |
 ## Things a reader may wonder about
 
 - **The MLflow run is named `v2.0.0`.** The cloud job ran before the version bump to `v2.1.0`, and the run name is taken from
