@@ -291,8 +291,8 @@ Do not include secrets or webhook URLs in the incident record.
 
 - [Project README](../README.md)
 - [Data contract](DATA_CONTRACT.md)
-- [Dashboard overview](../reports/evidence/dashboard-overview.png)
-- [Rejected-rate alert evidence](../reports/evidence/rejected-rate-alert.png)
-- [Low-confidence alert evidence](../reports/evidence/low-confidence-alert.png)
-- [Missed-run incident evidence](../reports/evidence/missed-run-alert-incident.png)
-- [Scheduler recovery evidence](../reports/evidence/scheduler-resume-success.png)
+- [Dashboard overview](evidence/11-dashboard-overview.png)
+- [Rejected-rate alert evidence](evidence/12-rejected-rate-alert.png)
+- [Low-confidence alert evidence](evidence/13-low-confidence-alert.png)
+- [Missed-run incident evidence](evidence/14-missed-run-alert-incident.png)
+- [Scheduler recovery evidence](evidence/16-scheduler-resume-success.png)
