@@ -107,6 +107,10 @@ make lint test portability-audit
 make image          # builds lemon-batch:<git sha>
 ```
 
+`make test` should end with `77 passed, 1 xfailed`. The one `xfailed` is intentional: it is the brick-wall photo that the
+colour guard still lets through (see "The failure we designed for"). It is marked `strict`, so if the guard ever starts
+rejecting that photo the test will fail and tell us to update the documentation.
+
 Run the whole pipeline locally, with no cloud account (blobs live in `data/_local_blob/`):
 
 ```bash
