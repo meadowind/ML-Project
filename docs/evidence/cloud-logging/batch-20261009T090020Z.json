@@ -1,0 +1,38 @@
+{
+  "insertId": "6ac8ad39000404b45058e37c",
+  "jsonPayload": {
+    "finished_at": "2026-10-09T09:00:41Z",
+    "batch_id": "batch-20261009T090020Z",
+    "event": "batch_finished",
+    "files_scored": 6,
+    "files_rejected": 4,
+    "rejected_rate": 0.4,
+    "needs_inspection_count": 6,
+    "ts": "2026-10-09T09:00:41Z",
+    "low_confidence_count": 6,
+    "low_confidence_rate": 1,
+    "model_version": "v2.1.0",
+    "duration_seconds": 21.09,
+    "low_confidence_threshold": 0.6,
+    "files_total": 10
+  },
+  "resource": {
+    "type": "cloud_run_job",
+    "labels": {
+      "location": "asia-southeast1",
+      "job_name": "lemon-batch",
+      "project_id": "lemon-mlops-project"
+    }
+  },
+  "timestamp": "2026-10-09T09:00:41.263348Z",
+  "labels": {
+    "course": "itcs355",
+    "run.googleapis.com/task_index": "0",
+    "run.googleapis.com/task_attempt": "0",
+    "run.googleapis.com/execution_name": "lemon-batch-26nzj",
+    "student": "lemon-mlops-project",
+    "lab": "capstone"
+  },
+  "logName": "projects/lemon-mlops-project/logs/run.googleapis.com%2Fstdout",
+  "receiveTimestamp": "2026-10-09T09:00:41.408525199Z"
+}
