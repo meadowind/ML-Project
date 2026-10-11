@@ -21,9 +21,9 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 make reproduce
 ```
 
-expected test_accuracy: 0.951 ± 0.020
+Expected test_accuracy: 0.951 ± 0.020
 
-This one command needs Docker and internet access, and **no cloud account or credentials**. It builds the
+This one command needs Docker and internet access, but **no cloud account or credentials**. It builds the
 training image, rebuilds the dataset from the pinned Hugging Face revision inside the container
 (about 360 MB download), trains with the fixed seed, then runs `make verify`, which checks two things:
 the processed-data fingerprint equals `data/dataset_lineage.json`, and the test accuracy is within the
@@ -36,9 +36,9 @@ emulation) with the image already built: about 3 minutes to download the dataset
 **What the tolerance covers.** Same code, data, seed and PyTorch version (2.6.0, pinned by hash). On the same
 CPU architecture the result is identical: the Vertex AI job (x86-64) and a MacBook running the amd64 image gave
 exactly 0.9510. Training directly on an arm64 laptop, outside Docker, gave 0.9608 (2 of the 204 test images
-different), which we attribute to CPU floating-point differences. ±0.020 is about 4 images, so a different
-x86-64 CPU also passes; we have not tried one. It does **not** cover a different PyTorch version, which gave
-0.9412 on the same data, so the version is locked in `requirements-train.lock`. We did not widen the
+gave a different result), which we attribute to CPU floating-point differences. ±0.020 is about 4 images, so a 
+different x86-64 CPU should also passes; we have not tried one. It does **not** cover a different PyTorch version, 
+which gave 0.9412 on the same data, so the version is locked in `requirements-train.lock`. We did not widen the
 tolerance to hide non-determinism. The image is built for amd64 on purpose; on Apple Silicon you will see a
 platform warning and the run is slower because it is emulated.
 
