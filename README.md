@@ -452,11 +452,15 @@ time (list prices; the free-trial credit is not shown): **THB 19.77** in total.
 | Cloud Storage, Scheduler, other | 0.00 | 0% | |
 
 The job costs about **THB 0.087 per execution** (11.71 / 135), paid whether or not a run finds new photos. At one run every
-30 minutes that is about THB 4.2 a day at list price, before any free tier. Scoring one photo takes roughly one second
-(a run with nothing to do takes about 12 s; a run with 10 photos about 21 s), which is about THB 1.6 per 1,000 photos. So
-the cost per 1,000 predictions is mostly the fixed cost divided by volume, an estimate of about THB 43 at 100 photos a day,
-THB 6 at 1,000 a day and THB 2 at 10,000 a day. The report's provisional figures (THB 136 and 519 per 1,000, from only 17
-predictions) are dominated by fixed and one-off costs and are not a unit cost.
+30 minutes that is about THB 4.2 a day at list price, before any free tier or credit. This is an average of billed CPU and
+memory (about 54 billed seconds per execution), not a measured run time; console durations were 12-40 s.
+
+**Cost per 1,000 predictions.** In the same window (13:30 UTC on 8 Oct to 07:30 UTC on 11 Oct) the logs show 6 batches
+with 17 scored photos; the other 129 runs found nothing new. Observed, that is **THB 689 per 1,000 scored predictions** for
+Cloud Run (11.71 / 17) and THB 1,163 with every billed item (19.77 / 17). It is high because the volume was tiny and the
+scheduled empty runs dominate. The marginal cost of one photo is small: about one second of compute, roughly **THB 1.6 per
+1,000 photos** (an estimate from run times, not a billed figure). Spreading the fixed THB 4.2 a day over volume gives about
+THB 43 per 1,000 at 100 photos a day, THB 6 at 1,000 a day and THB 2 at 10,000 a day.
 
 ## Shutting everything down
 ```bash
