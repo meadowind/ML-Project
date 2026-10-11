@@ -5,91 +5,112 @@
 - GCP project: `lemon-mlops-project`
 - Region: `asia-southeast1`
 - Cloud Run Job: `lemon-batch`
-- Billing export selection: 1–31 October 2026
-- Cloud Logging query window: 1–31 October 2026 (UTC)
-- Purpose: Estimate Cloud Run operating cost and overall reported project cost per 1,000 scored predictions.
+- Billing export period: 1–11 October 2026
+- Billing export snapshot: 11 October 2026, 14:55 ICT
+- Cloud Run executions covered by the reported execution count: 135
+- Execution window: 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC
+- Purpose: Summarize observed project costs and explain why a validated cost per scored prediction is not reported.
 
-The billing date range is the selected export window, not a finalized full-month bill. The values below reflect the export currently available and may change as additional usage is recorded.
+The billing figures are from the export available at the snapshot time and may change as additional usage is recorded. The billing period and the execution-count window are not identical, so per-prediction ratios are indicative rather than fully aligned unit costs.
 
 ## 2. Batch Processing Summary
 
-The Cloud Logging query returned the following completed-batch summary:
+The supplied billing snapshot includes 135 Cloud Run executions for the period 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC.
 
-| Metric | Value |
-|---|---:|
-| Completed batches (`batch_finished`) | 6 |
-| Files total | 21 |
-| Files scored | 17 |
-| Files rejected | 4 |
-| Rejection rate among total files | 19.05% |
+A current, aligned count of completed batches and scored predictions is not established by this billing snapshot. Therefore, this report does not carry forward earlier batch or prediction counts as the denominator for a cost-per-prediction calculation.
 
-The rejection rate is calculated as `4 / 21 × 100`.
-
-`batch_skipped` events represent scheduled executions that found no new files. They are relevant to operational overhead even though they do not contribute scored predictions.
+Scheduled executions can occur without new photos, so execution count and scored-prediction count represent different measures of workload.
 
 ## 3. Billing Export Breakdown
 
-| Billing item | Reported cost (THB) |
-|---|---:|
-| Cloud Run Jobs CPU | 2.09 |
-| Cloud Run Jobs Memory | 0.23 |
-| Artifact Registry network internet egress | 5.35 |
-| Artifact Registry storage | 0.02 |
-| Vertex AI training / pipelines N1 Core | 0.71 |
-| Vertex AI training / pipelines N1 RAM | 0.36 |
-| Vertex AI training SSD persistent disk | 0.06 |
-| Other listed services and adjustments | 0.00 (rounded in export) |
-| **Billing export subtotal** | **8.83** |
+| Billing item | Reported cost (THB) | Cost behavior |
+|---|---:|---|
+| Cloud Run Jobs CPU | 10.54 | Execution-dependent |
+| Cloud Run Jobs Memory | 1.17 | Execution-dependent |
+| Artifact Registry network internet egress | 5.35 | One-off usage observed in this period |
+| Artifact Registry storage | 1.57 | Recurring storage |
+| Vertex AI training / pipelines N1 Core | 0.71 | Training-related; incurred during the observed period |
+| Vertex AI training / pipelines N1 RAM | 0.36 | Training-related; incurred during the observed period |
+| Vertex AI training SSD persistent disk | 0.06 | Training-related storage |
+| Other listed services and adjustments | 0.00 (rounded) | No material charge shown |
+| **Total reported project cost** | **19.77** | |
 
-The subtotal is taken from the billing export. Individual displayed rows may be rounded, so their displayed values may not sum exactly to the export subtotal.
+The total is the billing export subtotal. Individual rows are rounded for display.
 
-The export does not show Free Trial credits as a separate line item. Therefore, this report does not claim that THB 8.83 is the final amount payable after credits.
+The export does not separately establish the amount of Free Trial credits applied or the final payable amount. Therefore, THB 19.77 is the reported subtotal, not a claim about the final amount payable after credits.
 
-## 4. Cost per 1,000 Scored Predictions
+## 4. Cloud Run Cost per Execution
 
-### Cloud Run CPU and memory cost
+Cloud Run charges in the supplied billing export are:
 
-Cloud Run CPU and memory charges total:
+- CPU: THB 10.54
+- Memory: THB 1.17
+- Combined Cloud Run total: THB 11.71
 
-`THB 2.09 + THB 0.23 = THB 2.32`
+Using 135 executions:
 
-Using 17 scored predictions as the denominator:
+`THB 11.71 / 135 = approximately THB 0.087 per execution`
 
-`THB 2.32 / 17 × 1,000 = THB 136.47`
+The CPU component averages approximately THB 0.078 per execution, and memory averages approximately THB 0.009 per execution.
 
-**Provisional estimate: THB 136.47 per 1,000 scored predictions.**
+This is a list-price average of billed Cloud Run CPU and memory per execution. The Cloud Run free tier and Free Trial credits are not applied. At 48 scheduled runs per day (one every 30 minutes), the estimated cost is approximately THB 4.20 per day.
 
-This is an observed average for the current workload, not a guaranteed marginal cost for future predictions. The Cloud Run charges may include scheduled executions that found no new files.
+The billing export records 14,520 CPU-seconds at 2 vCPU. This corresponds to approximately 54 billed seconds per execution when divided by 135 executions and 2 vCPU. This is a billed average derived from aggregate usage, not a measured individual execution duration. Console-observed execution durations were approximately 12–40 seconds.
 
-### Total reported project cost
+## 5. Fixed and Variable Cost View
 
-Using the billing export subtotal:
+### Execution-dependent costs
 
-`THB 8.83 / 17 × 1,000 = THB 519.41`
+Cloud Run CPU and memory charges vary with billed resource usage. For the observed period, these charges totalled THB 11.71 across 135 executions, or approximately THB 0.087 per execution on average.
 
-**Provisional estimate: THB 519.41 per 1,000 scored predictions.**
+The job is scheduled every 30 minutes whether or not new photos are available. Executions that find no new files can still contribute to operating costs without increasing the scored-prediction count.
 
-This broader figure includes reported Artifact Registry and Vertex AI training costs, in addition to Cloud Run. It must not be interpreted as the cost of inference alone.
+### Recurring or capacity-related costs
 
-## 5. Interpretation and Limitations
+Artifact Registry storage was THB 1.57 in the supplied export. Storage costs can recur while images remain stored, independent of how many predictions are scored during a particular execution.
 
-1. The denominator is 17 scored predictions observed in six completed batches. It is a small sample and may not represent steady-state production usage.
-2. These per-1,000 figures are provisional ratios. The billing export period and the log-derived prediction-count period have not yet been confirmed to align, so they must not be treated as validated unit costs.
-3. Scheduled executions with no new files can consume resources without increasing the scored-prediction count.
-4. The billing export selection covers 1–31 October 2026, but the report was prepared before the end of that period. Costs can change as the month progresses.
-5. The CSV does not separately establish the amount of Free Trial credits applied or the final payable amount.
-6. Artifact Registry network egress is a significant component of the current reported subtotal. It should be investigated separately from model inference and training costs.
+### One-off or workload-specific costs
 
-## 6. Recommended Follow-up
+Artifact Registry internet egress was THB 5.35 for 1.33 GiB. The team reports that this usage came from GitHub Actions runners pulling the container image before the workflow moved to Cloud Scheduler. The recorded egress amount has remained unchanged since 9 October, and this transfer is understood to have stopped after the migration.
+
+Vertex AI training-related charges totalled THB 1.13 for CPU, RAM, and SSD-backed persistent disk. These charges arose from training activity in the observed period and should not be treated as a recurring per-inference cost without further evidence.
+
+This classification describes the observed usage and expected cost behavior; it does not imply that every charge is strictly fixed or that future usage will be identical.
+
+## 6. Cost per 1,000 Scored Predictions
+
+Per-1,000-photo costs are not reported as validated unit costs in this snapshot. The available execution count and billing data do not establish a sufficiently aligned, verified prediction denominator. Cloud Run costs include scheduled-run overhead, including executions that may not score any photos.
+
+## 7. Interpretation and Limitations
+
+1. The billing export covers 1–11 October 2026 at the snapshot taken on 11 October 2026, 14:55 ICT. The 135-execution count covers 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC; these periods are not fully aligned.
+2. Cloud Run CPU and memory total THB 11.71 over 135 executions, approximately THB 0.087 per execution before applying the free tier or Free Trial credits.
+3. The export records 14,520 vCPU-seconds over 135 executions at 2 vCPU, equivalent to approximately 54 billed seconds per execution. This is an aggregate billed-time average, not a measured individual runtime. Console-observed durations were approximately 12–40 seconds, and the gap is not fully explained.
+4. At 48 scheduled runs per day, Cloud Run CPU and memory cost is approximately THB 4.20 per day at list price, before free-tier usage or credits.
+5. Cloud Run costs are largely run-related overhead. Runs that find no new photos can still incur cost without scoring photos, so per-1,000-photo figures should not be presented as validated unit costs.
+6. Artifact Registry egress was THB 5.35 for 1.33 GiB and is attributed to CI image pulls before the move to Cloud Scheduler. The amount did not increase between the reported exports.
+7. Artifact Registry storage was THB 1.57. Vertex AI training-related CPU, RAM, and SSD charges totalled THB 1.13 and should be distinguished from inference operating costs.
+8. The reported THB 19.77 is the billing export total; it does not establish the final amount payable after any Free Trial credits.
+
+## 8. Official Pricing References
+
+- [Cloud Run pricing](https://cloud.google.com/run/pricing)
+- [Artifact Registry pricing](https://cloud.google.com/artifact-registry/pricing)
+- [Vertex AI pricing](https://cloud.google.com/vertex-ai/pricing)
+
+These links are official pricing references. The reported THB values in this document come from the project's supplied billing export, not from an independent recalculation of list prices.
+
+## 9. Recommended Follow-up
 
 - Re-export billing data after the reporting period or at a clearly recorded cutoff time.
 - Align the billing cutoff with the Cloud Logging window used to count scored predictions.
 - Track Cloud Run CPU and memory separately from image transfer, storage, and Vertex AI training.
-- Recalculate cost per 1,000 scored predictions after collecting a larger number of batches.
+- Recalculate cost per 1,000 scored predictions after collecting aligned billing data and a verified scored-prediction count over the same period.
 - Record the export timestamp and the exact log-query window whenever this report is updated.
 
-## 7. Data Sources
+## 10. Data Sources
 
-- Google Cloud Billing export CSV selected for 1–31 October 2026.
-- Cloud Logging query for `resource.type="cloud_run_job"` and `resource.labels.job_name="lemon-batch"` over 1–31 October 2026 (UTC).
+- Google Cloud Billing export for 1–11 October 2026, snapshot taken 11 October 2026 at 14:55 ICT.
+- Cloud Run execution count of 135 for the period 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC.
+- Cloud Logging query for `resource.type="cloud_run_job"` and `resource.labels.job_name="lemon-batch"`.
 - Batch summary logs containing `batch_finished` events.
