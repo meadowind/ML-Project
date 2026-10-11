@@ -375,17 +375,17 @@ completed successfully.
 
 Evidence captured during validation:
 
-- Dashboard overview: [dashboard-overview.png](evidence/dashboard-overview.png)
-- Rejected-rate incident: [rejected-rate-alert.png](evidence/rejected-rate-alert.png)
-- Low-confidence incident: [low-confidence-alert.png](evidence/low-confidence-alert.png)
-- Missed-run incident: [missed-run-alert-incident.png](evidence/missed-run-alert-incident.png)
-- Missed-run metric baseline: [missed-run-metric-baseline.png](evidence/missed-run-metric-baseline.png)
-- Scheduler recovery: [scheduler-resume-success.png](evidence/scheduler-resume-success.png)
-- Scheduler recovery (WSL capture): [scheduler-resume-success-wsl.png](evidence/scheduler-resume-success-wsl.png)
+- Dashboard overview: [11-dashboard-overview.png](docs/evidence/11-dashboard-overview.png)
+- Rejected-rate incident: [12-rejected-rate-alert.png](docs/evidence/12-rejected-rate-alert.png)
+- Low-confidence incident: [13-low-confidence-alert.png](docs/evidence/13-low-confidence-alert.png)
+- Missed-run incident: [14-missed-run-alert-incident.png](docs/evidence/14-missed-run-alert-incident.png)
+- Missed-run metric baseline: [15-missed-run-metric-baseline.png](docs/evidence/15-missed-run-metric-baseline.png)
+- Scheduler recovery: [16-scheduler-resume-success.png](docs/evidence/16-scheduler-resume-success.png)
+- Scheduler recovery (WSL capture): [16b-scheduler-resume-success-wsl.png](docs/evidence/16b-scheduler-resume-success-wsl.png)
 
-These tests verify Cloud Monitoring incident generation and scheduler recovery.
-Delivery of alert messages to Discord is a separate integration and must be
-verified independently.
+These tests verify Cloud Monitoring incident generation, email delivery and scheduler recovery
+(the email evidence is indexed in [`docs/evidence/`](docs/evidence/README.md)). Failure handling is in
+[`docs/FAILURE_RECOVERY_RUNBOOK.md`](docs/FAILURE_RECOVERY_RUNBOOK.md).
 
 ### Monitoring resources
 
@@ -436,8 +436,14 @@ The proper fix is a learned "not a leaf" check (an extra class or a one-class de
 images); it is not done here.
 
 ## Cost per 1,000 predictions
-TODO: measured numbers. Cost components: scoring time on the runner, storage and operations
-in the bucket, registry storage, and image download only for batches that contain new photos.
+Full report: [`docs/COST_REPORT.md`](docs/COST_REPORT.md) (billing export for 1-31 Oct 2026, taken mid-month;
+list prices, free-trial credit not shown). Reported cost was THB 8.83: Cloud Run job CPU and memory
+THB 2.32, Artifact Registry network egress THB 5.35 (image pulls by GitHub runners while the batch still ran from
+GitHub's cron), Vertex AI training THB 1.13 (one run), registry storage THB 0.02. Over 17 scored predictions that is a
+provisional THB 136.47 per 1,000 for Cloud Run alone and THB 519.41 per 1,000 for everything reported. These
+figures are dominated by costs that do not depend on the number of predictions (the job starts every 30 minutes,
+whether or not there are new photos; training and the earlier egress happened once), so they overstate the cost of a
+busy day and are not a validated unit cost. See the report for the limits.
 
 ## Shutting everything down
 ```bash
