@@ -26,7 +26,7 @@ data" is checked, not assumed.
 ### Preparation (`src/data/download_and_prep.py`)
 1. Load all upstream partitions of the pinned revision and pool them (1,354 photos).
 2. Split with `train_test_split`, `random_state=42`, stratified by class: 70% train, then the
-   remaining 30% split in half into validation and test.
+   remaining 30% is split in half into validation and test.
 3. Save each photo as `data/processed/<split>/<class>/<split>_<class>_<nnnn>.jpg`, JPEG quality 95.
 4. Write `data/dataset_lineage.json` with the counts and the fingerprint.
 
@@ -45,7 +45,7 @@ split keeps the same proportions, and the model card reports recall per class.
 |---|---|
 | Architecture | MobileNetV3-Small from torchvision, ImageNet pre-trained weights, last layer replaced by a 9-way linear layer |
 | Input | RGB resized to 224x224, ImageNet mean/std normalisation |
-| Train augmentation | random horizontal flip only |
+| Training augmentation | random horizontal flip only |
 | Optimiser | AdamW, learning rate 1e-3, batch size 32, 5 epochs, CPU only |
 | Seed | 42 (Python, NumPy and PyTorch) |
 | Model selection | the epoch with the best validation accuracy is kept; the test split is evaluated once, at the end, and never used to choose anything |
@@ -83,12 +83,12 @@ make setup                         # pinned dependencies
 |---|---|
 | `make data` | download the pinned revision, build `data/processed/`, rewrite `data/dataset_lineage.json` |
 | `make train` | train locally; writes to `reports/repro/lemon_classifier/`, never over the committed model |
-| `make reproduce` | the one command for a grader: rebuild the data and retrain inside Docker with no cloud account, then `make verify` compares with the claim in `README.md` |
-| `make train-cloud` | build the training image, submit it as a Vertex AI custom job, wait for it. The job refuses to train if the rebuilt data fingerprint differs from the committed one |
+| `make reproduce` | the one command for a grader: rebuild the data and retrain inside Docker with no cloud account, then run `make verify` compares with the claim in `README.md` |
+| `make train-cloud` | build the training image, submit it as a Vertex AI custom job, and wait for it. The job refuses to train if the rebuilt data fingerprint differs from the committed one |
 | `make fetch-trained RUN=<id>` | download a cloud-trained model, verify its hashes, and compare it with the committed one |
 | `make fetch-trained RUN=<id> ARGS=--adopt` | copy it to `models/registry/lemon_classifier_v2/` (then open a pull request) |
 
-If `make data` produces a different fingerprint than the committed one, stop: either the upstream
+If `make data` produces a different fingerprint from the committed one, stop: either the upstream
 revision or the library versions changed, and every number in the model card would need to be redone.
 Set `ALLOW_NEW_DATA=1` in the cloud job only if you mean to accept a different dataset.
 
