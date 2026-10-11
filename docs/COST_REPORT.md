@@ -9,17 +9,18 @@
 - Billing export snapshot: 11 October 2026, 14:55 ICT
 - Cloud Run executions covered by the reported execution count: 135
 - Execution window: 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC
-- Purpose: Summarize observed project costs and explain why a validated cost per scored prediction is not reported.
+- Scored predictions in the same window (Cloud Logging): 17, in 6 batches
+- Purpose: Summarize observed project costs and report the cost per 1,000 scored predictions, observed and marginal.
 
-The billing figures are from the export available at the snapshot time and may change as additional usage is recorded. The billing period and the execution-count window are not identical, so per-prediction ratios are indicative rather than fully aligned unit costs.
+The billing figures are from the export available at the snapshot time and may change as additional usage is recorded. The billing period (1–11 October) is longer than the execution and prediction window (8 October 13:30 UTC to 11 October 07:30 UTC). The Cloud Run charges are assumed to fall in that window because the job started running on 8 October; other items are shown for context. The billing export also lags, so ratios are indicative.
 
 ## 2. Batch Processing Summary
 
 The supplied billing snapshot includes 135 Cloud Run executions for the period 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC.
 
-A current, aligned count of completed batches and scored predictions is not established by this billing snapshot. Therefore, this report does not carry forward earlier batch or prediction counts as the denominator for a cost-per-prediction calculation.
+For the same window, Cloud Logging shows 6 `batch_finished` events covering 21 files, of which 17 were scored (the rest were rejected). The other 129 executions found no new files and logged `batch_skipped`.
 
-Scheduled executions can occur without new photos, so execution count and scored-prediction count represent different measures of workload.
+Scheduled executions can occur without new photos, so execution count and scored-prediction count are different measures of workload. The 17 scored predictions are the denominator used in section 6.
 
 ## 3. Billing Export Breakdown
 
@@ -79,7 +80,20 @@ This classification describes the observed usage and expected cost behavior; it 
 
 ## 6. Cost per 1,000 Scored Predictions
 
-Per-1,000-photo costs are not reported as validated unit costs in this snapshot. The available execution count and billing data do not establish a sufficiently aligned, verified prediction denominator. Cloud Run costs include scheduled-run overhead, including executions that may not score any photos.
+Window: 8 October 2026 13:30 UTC to 11 October 2026 07:30 UTC, the same window as the 135 Cloud Run executions. Predictions are counted from Cloud Logging (`jsonPayload.event="batch_finished"`, job `lemon-batch`): 6 batches, 21 files, 17 scored.
+
+| Basis | THB | Per 1,000 scored predictions (THB) |
+|---|---:|---:|
+| Cloud Run CPU + memory (11.71 / 17) | 11.71 | 689 |
+| All billed items in the export (19.77 / 17) | 19.77 | 1,163 |
+
+These are observed, fully loaded figures. They are high because only 17 photos were scored in about three days, so scheduled runs that find nothing to do dominate the cost. They are not a per-photo price.
+
+**Marginal cost.** Scoring one photo takes about one second on 2 vCPU / 2 GiB (an empty run takes about 12 s, a run with 10 photos about 21 s). At list price this is about THB 0.0016 per second, or about THB 1.6 per 1,000 photos. This is an estimate from run times, not a billed measurement.
+
+**Sensitivity to volume.** The fixed run cost is about THB 4.20 per day (48 runs x THB 0.087). Spreading it over volume gives an estimated cost of about THB 43 per 1,000 predictions at 100 photos per day, THB 6 at 1,000 per day and THB 2 at 10,000 per day. These are estimates, not measurements.
+
+The free tier and Free Trial credits are not applied. The THB 5.35 egress is a one-off cost and the Vertex AI charge is training-related, so the Cloud Run row is the better indicator of operating cost.
 
 ## 7. Interpretation and Limitations
 
@@ -87,7 +101,7 @@ Per-1,000-photo costs are not reported as validated unit costs in this snapshot.
 2. Cloud Run CPU and memory total THB 11.71 over 135 executions, approximately THB 0.087 per execution before applying the free tier or Free Trial credits.
 3. The export records 14,520 vCPU-seconds over 135 executions at 2 vCPU, equivalent to approximately 54 billed seconds per execution. This is an aggregate billed-time average, not a measured individual runtime. Console-observed durations were approximately 12–40 seconds, and the gap is not fully explained.
 4. At 48 scheduled runs per day, Cloud Run CPU and memory cost is approximately THB 4.20 per day at list price, before free-tier usage or credits.
-5. Cloud Run costs are largely run-related overhead. Runs that find no new photos can still incur cost without scoring photos, so per-1,000-photo figures should not be presented as validated unit costs.
+5. Cloud Run costs are largely run-related overhead. Runs that find no new photos can still incur cost without scoring photos. With 17 scored predictions in the window, the observed cost per 1,000 scored predictions is THB 689 (Cloud Run) and THB 1,163 (all billed items); the marginal cost is estimated at about THB 1.6 per 1,000 photos. The 17-prediction sample is small, so treat the observed figures as indicative.
 6. Artifact Registry egress was THB 5.35 for 1.33 GiB and is attributed to CI image pulls before the move to Cloud Scheduler. The amount did not increase between the reported exports.
 7. Artifact Registry storage was THB 1.57. Vertex AI training-related CPU, RAM, and SSD charges totalled THB 1.13 and should be distinguished from inference operating costs.
 8. The reported THB 19.77 is the billing export total; it does not establish the final amount payable after any Free Trial credits.
@@ -105,7 +119,7 @@ These links are official pricing references. The reported THB values in this doc
 - Re-export billing data after the reporting period or at a clearly recorded cutoff time.
 - Align the billing cutoff with the Cloud Logging window used to count scored predictions.
 - Track Cloud Run CPU and memory separately from image transfer, storage, and Vertex AI training.
-- Recalculate cost per 1,000 scored predictions after collecting aligned billing data and a verified scored-prediction count over the same period.
+- Recalculate cost per 1,000 scored predictions with a larger scored-prediction count and the billing cutoff recorded alongside the log window.
 - Record the export timestamp and the exact log-query window whenever this report is updated.
 
 ## 10. Data Sources
