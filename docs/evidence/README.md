@@ -13,7 +13,7 @@ on 9 Oct 2026. Console times are Thailand time (UTC+7); times in the README are 
 | 5 | `05-make-reproduce-pass.png` | `make reproduce` from a clean clone: same data fingerprint, 0.9510 vs claimed 0.951 ± 0.020, PASS | README, "Reproduce the model" |
 | 6 | `06a-artifact-lemon-batch.png`, `06b-artifact-lemon-train.png` | Artifact Registry: images by digest. The deployed serving image is `73a09db082cf` (tag `c7fbd1d`); the training image is `fb541316…` | README, "The scheduled batch" |
 | 7 | `07-cloud-run-executions.png` | Cloud Run job `lemon-batch`: executions starting every 30 minutes, all `1/1 completed` | README, cadence table |
-| 8 | `08-cloud-scheduler.png` | Cloud Scheduler `lemon-batch-every-30min`: Enabled, `*/30 * * * *` (UTC), target is the `lemon-batch` job. "Last run" 16:02 was started by hand | README, cadence table |
+| 8 | `08-cloud-scheduler.png` | Cloud Scheduler `lemon-batch-every-30min`: Enabled, `*/30 * * * *` (UTC), target is the `lemon-batch` job. The "Last run" at 16:02 was started by hand | README, cadence table |
 | 9 | `09-ci-fail-tests.png` | CI on the deliberately broken commit `6b92682` (blur cutoff 0): 2 failed, 32 passed; `build` and publish did not run | README, "CI/CD" (CI blocks a bad commit) |
 | 10 | `10-actions-batch-success.png` | Manual `batch.yml` run on the cloud-trained model (`v2.1.0`): 1 photo scored, summary JSON | README, "What the live deployment showed" |
 | 11 | `11-dashboard-overview.png` | Cloud Monitoring dashboard overview | Monitoring evidence |
