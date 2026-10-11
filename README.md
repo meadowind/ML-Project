@@ -440,14 +440,23 @@ The proper fix is a learned "not a leaf" check (an extra class or a one-class de
 images); it is not done here.
 
 ## Cost per 1,000 predictions
-Full report: [`docs/COST_REPORT.md`](docs/COST_REPORT.md) (billing export for 1-31 Oct 2026, taken mid-month;
-list prices, free-trial credit not shown). Reported cost was THB 8.83: Cloud Run job CPU and memory
-THB 2.32, Artifact Registry network egress THB 5.35 (image pulls by GitHub runners while the batch still ran from
-GitHub's cron), Vertex AI training THB 1.13 (one run), registry storage THB 0.02. Over 17 scored predictions that is a
-provisional THB 136.47 per 1,000 for Cloud Run alone and THB 519.41 per 1,000 for everything reported. These
-figures are dominated by costs that do not depend on the number of predictions (the job starts every 30 minutes,
-whether or not there are new photos; training and the earlier egress happened once), so they overstate the cost of a
-busy day and are not a validated unit cost. See the report for the limits.
+Full report: [`docs/COST_REPORT.md`](docs/COST_REPORT.md). Billing export for 1-11 Oct 2026, taken on 11 Oct at 14:55 Thai
+time (list prices; the free-trial credit is not shown): **THB 19.77** in total.
+
+| Item | THB | Share | Note |
+|---|---:|---:|---|
+| Cloud Run job CPU and memory | 11.71 | 59% | 135 executions (13:30 UTC on 8 Oct to 07:30 UTC on 11 Oct) |
+| Artifact Registry network egress | 5.35 | 27% | one-off: image pulls by GitHub runners before the batch moved to Cloud Scheduler; 1.33 GiB in the export of 9 Oct and still 1.33 GiB on 11 Oct |
+| Artifact Registry storage | 1.57 | 8% | grows with every image the CI publishes |
+| Vertex AI training | 1.13 | 6% | one training run |
+| Cloud Storage, Scheduler, other | 0.00 | 0% | |
+
+The job costs about **THB 0.087 per execution** (11.71 / 135), paid whether or not a run finds new photos. At one run every
+30 minutes that is about THB 4.2 a day at list price, before any free tier. Scoring one photo takes roughly one second
+(a run with nothing to do takes about 12 s; a run with 10 photos about 21 s), which is about THB 1.6 per 1,000 photos. So
+the cost per 1,000 predictions is mostly the fixed cost divided by volume, an estimate of about THB 43 at 100 photos a day,
+THB 6 at 1,000 a day and THB 2 at 10,000 a day. The report's provisional figures (THB 136 and 519 per 1,000, from only 17
+predictions) are dominated by fixed and one-off costs and are not a unit cost.
 
 ## Shutting everything down
 ```bash
