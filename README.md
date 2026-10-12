@@ -47,7 +47,7 @@ platform warning and the run is slower because it is emulated.
 ```mermaid
 flowchart LR
     U["grower uploads<br>intake/*.jpg"] --> B[("object storage<br>(GCS bucket)")]
-    SCH["Cloud Scheduler<br>0 */2 * * * (UTC)"] -->|"starts"| C["Cloud Run job lemon-batch<br>validator + MobileNetV3-Small"]
+    SCH["Cloud Scheduler<br>0 */2 * * * (Asia/Bangkok)"] -->|"starts"| C["Cloud Run job lemon-batch<br>validator + MobileNetV3-Small"]
     B -->|"sync_down: new files only"| C
     C -->|"scored"| A["archive/"]
     C -->|"rejected / crashed"| Q["quarantine/"]
@@ -83,12 +83,14 @@ client (hash-locked in `requirements-cloud.lock`); the portability rule is that 
   (`infra/setup_cloudrun.sh`, `make deploy-batch`). The job has a 600 s timeout and no retries, so a failed run
   is visible instead of silently repeated.
 
+  **Note on the Cloud Scheduler name:** The scheduler job is still named `lemon-batch-every-30min` for backward compatibility. Despite the name, it is configured to run every two hours (`0 */2 * * *`) in the `Asia/Bangkok` time zone. The job name is only an identifier and does not determine the execution frequency.
+
   | | GitHub Actions cron (before) | Cloud Scheduler → Cloud Run job (after) |
   |---|---|---|
-  | Configured | every 30 min | every 30 min |
+  | Configured during recorded test | every 30 min | every 30 min (historical; now every 2 hours) |
   | Observed gaps between runs | 4 h 14 m 25 s and 4 h 33 m 54 s | 29 m 56 s to 30 m 04 s, over 34 consecutive gaps |
   | Start vs the scheduled minute | hours late (3 runs in 8 h 48 m, about 17 expected) | 0–7 s after the minute |
-  | Worst-case wait for a new photo | more than 4 h 30 m | 30 min + job run time |
+  | Worst-case wait for a new photo | more than 4 h 30 m | 30 min + job run time during recorded test; now up to 2 hours + job run time |
 
   "After" is 35 consecutive scheduler executions, from 13:30:01 UTC on 8 Oct to 06:30:05 UTC on 9 Oct
   (17 hours, no run missing; `gcloud run jobs executions list --job lemon-batch` lists them). The GitHub
