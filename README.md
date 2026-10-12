@@ -1,6 +1,6 @@
 # Lemon Leaf Triage — scheduled batch inference on GCP
 
-Growers upload photos of lemon leaves; every 30 minutes a Cloud Scheduler entry starts a Cloud Run job that scores the new photos,
+Growers upload photos of lemon leaves; every 2 hours a Cloud Scheduler entry starts a Cloud Run job that scores the new photos,
 flags leaves that are not healthy for manual inspection, and sets aside photos it should not
 trust (blurry, corrupted, not a leaf). Nothing needs to be running between batches.
 
@@ -12,7 +12,7 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 |---|---|
 | User | An orchard manager who wants a short list of trees to walk to |
 | Serving pattern | **Scheduled batch** (not online): leaf photos are not urgent, and batch costs nothing while idle |
-| Freshness | A photo is scored at the next scheduled run: at most 30 minutes plus the job's own run time (about 10 s start-up and 11 s of scoring for 4 photos in our tests). Measured cadence, and the before/after comparison with GitHub's cron, are in "Schedule cadence" |
+| Freshness | A photo is scored at the next scheduled run: up to approximately 2 hours plus the job's own run time (about 10 s start-up and 11 s of scoring for 4 photos in our tests). Measured cadence, and the before/after comparison with GitHub's cron, are in "Schedule cadence" |
 | Output | One CSV row per photo (`class`, `confidence`, `needs_inspection`, `status`) and one summary JSON per batch |
 
 ## Reproduce the model
@@ -47,7 +47,7 @@ platform warning and the run is slower because it is emulated.
 ```mermaid
 flowchart LR
     U["grower uploads<br>intake/*.jpg"] --> B[("object storage<br>(GCS bucket)")]
-    SCH["Cloud Scheduler<br>*/30 * * * * (UTC)"] -->|"starts"| C["Cloud Run job lemon-batch<br>validator + MobileNetV3-Small"]
+    SCH["Cloud Scheduler<br>0 */2 * * * (UTC)"] -->|"starts"| C["Cloud Run job lemon-batch<br>validator + MobileNetV3-Small"]
     B -->|"sync_down: new files only"| C
     C -->|"scored"| A["archive/"]
     C -->|"rejected / crashed"| Q["quarantine/"]
@@ -173,7 +173,7 @@ created yet: wait a minute and run the script again (it is safe to repeat).
 
 ### The scheduled batch (Cloud Run job + Cloud Scheduler)
 ```bash
-make deploy-batch IMAGE_REF=<registry>/lemon-batch@sha256:...   # job, scheduler service account, */30 entry
+make deploy-batch IMAGE_REF=<registry>/lemon-batch@sha256:...   # job, scheduler service account, every-2-hours entry
 make demo-upload FILES="a.jpg b.jpg"   # simulate an upload
 make run-batch-cloud                   # run the job once now and wait for it
 make scheduler-run-now                 # fire the scheduler entry, as the clock would
@@ -225,7 +225,7 @@ run, so nothing broken reaches the registry.
 ## Monitoring and alerting
 
 The scheduled production batch is monitored with **Cloud Logging** and **Cloud Monitoring**. The
-`lemon-batch` Cloud Run Job is started by Cloud Scheduler every 30 minutes.
+`lemon-batch` Cloud Run Job is started by Cloud Scheduler every 2 hours.
 
 ### Dashboard
 
@@ -264,7 +264,7 @@ Three alert policies are configured:
 | --------------------------------------- | -------------------------------------- | --------------------------------------------------- |
 | `lemon-batch-rejected-rate-alert`       | Rejected rate >= 10%                   | Detect an abnormal number of rejected files         |
 | `lemon-batch-low-confidence-rate-alert` | Low-confidence rate >= 30%             | Detect batches with unusually uncertain predictions |
-| `lemon-batch-missed-run-alert`          | No successful execution for 60 minutes | Detect missed or failed scheduled executions        |
+| `lemon-batch-missed-run-alert`          | No successful execution for 4 hours | Detect missed or failed scheduled executions        |
 
 The rate alerts use `COMPARISON_GT` because the current Cloud Monitoring configuration does not
 support `COMPARISON_GE` for these conditions. The thresholds are therefore configured as `0.099999`
@@ -282,7 +282,7 @@ filtered to:
 metric.labels.result="succeeded"
 ```
 
-and triggers when no successful execution is observed for 60 minutes.
+and triggers when no successful execution is observed for 4 hours.
 
 A `batch_skipped` event caused by an empty intake directory is still a successful Cloud Run
 execution. Therefore, an empty batch does not trigger the missed-run alert.
