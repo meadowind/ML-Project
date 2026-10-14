@@ -24,6 +24,7 @@ mlflow.db
 reports/repro/
 data/_local_blob/
 data_demo_*/
+demo_sim/
 failure_photos/
 
 # local copies of cloud-trained models
