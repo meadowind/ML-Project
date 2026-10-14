@@ -109,7 +109,7 @@ make lint test portability-audit
 make image          # builds lemon-batch:<git sha>
 ```
 
-`make test` should end with `92 passed, 1 xfailed`. The one `xfailed` is intentional: it is the brick-wall photo that the
+`make test` should end with `94 passed, 1 xfailed`. The one `xfailed` is intentional: it is the brick-wall photo that the
 colour guard still lets through (see "The failure we designed for"). It is marked `strict`, so if the guard ever starts
 rejecting that photo the test will fail and tell us to update the documentation.
 
@@ -375,6 +375,10 @@ skipped, because small batches move a lot by chance. It cannot measure accuracy:
 every cause is a lead for a person to check (open the `needs_inspection` files, label a sample), not a proof.
 `--fail-on-drift` makes the exit code 1 when any signal is flagged. The deployed project has scored fewer than 30
 photos in total so far, so on it the command reports the rates and says the tests were skipped.
+
+To see it flag a real change, `make diagnose-demo SCENARIO=bad_uploads` (also `non_leaf`, `model_uncertainty`,
+`covariate_drift`, `stable`) writes **simulated** result files, clearly marked `SIMULATED`, and diagnoses them. Saved
+examples are in `docs/evidence/diagnose-simulated/`. They show the logic, not real drift.
 
 ### Monitoring validation and evidence
 

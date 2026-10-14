@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 
 import diagnose_performance as dp
+import simulate_drift_demo as sim
 
 from src.batch.run import CSV_COLUMNS
 
@@ -140,3 +141,34 @@ def test_cli_reads_a_results_folder_and_fails_on_drift_only_when_asked(tmp_path,
 
 def test_cli_with_no_results_exits_2(tmp_path):
     assert dp.main(["--results-dir", str(tmp_path)]) == 2
+
+
+# --- simulated demo data (scripts/simulate_drift_demo.py) --------------------------------------
+
+
+EXPECTED_CAUSE = {
+    "stable": "no evidence of drift",
+    "bad_uploads": "blurred",
+    "non_leaf": "not lemon leaves",
+    "model_uncertainty": "model uncertainty",
+    "covariate_drift": "covariate drift",
+}
+
+
+def test_every_simulated_scenario_is_diagnosed_correctly(tmp_path):
+    for scenario, expected in EXPECTED_CAUSE.items():
+        out = tmp_path / scenario
+        sim.write(sim.build(scenario), out)
+        paths = sorted((out / "results").glob("*.csv"))
+        baseline, recent, _ = dp.split_windows(dp.load_rows(paths), 3, None)
+        result = dp.diagnose(baseline, recent)
+        assert expected in causes(result), scenario
+        assert result["drift"] is (scenario != "stable"), scenario
+
+
+def test_simulated_rows_are_marked_and_match_the_batch_format(tmp_path):
+    path = sim.write(sim.build("stable"), tmp_path)[0]
+    with path.open() as fh:
+        reader = csv.DictReader(fh)
+        assert reader.fieldnames == CSV_COLUMNS
+        assert {r["model_version"] for r in reader} == {"SIMULATED"}
