@@ -4,7 +4,7 @@ TAG ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 GIT_COMMIT ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 PLATFORM ?= linux/amd64
 
-.PHONY: setup data train test lint portability-audit validator-audit scan-secrets image clean lock lock-cloud lock-train
+.PHONY: setup data train test lint portability-audit validator-audit diagnose scan-secrets image clean lock lock-cloud lock-train
 
 setup:
 	python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -20,6 +20,8 @@ portability-audit:
 	python scripts/portability_audit.py
 validator-audit: ## false-reject rate of the input validator on the clean train+validation photos
 	python -m src.model.eval_validator
+diagnose: ## why did quality drop? compare recent batches with earlier ones (ARGS=--from-cloud for the bucket)
+	python scripts/diagnose_performance.py $(ARGS)
 scan-secrets:
 	python scripts/scan_secrets.py
 image:
