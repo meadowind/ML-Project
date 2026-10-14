@@ -109,7 +109,7 @@ make lint test portability-audit
 make image          # builds lemon-batch:<git sha>
 ```
 
-`make test` should end with `77 passed, 1 xfailed`. The one `xfailed` is intentional: it is the brick-wall photo that the
+`make test` should end with `92 passed, 1 xfailed`. The one `xfailed` is intentional: it is the brick-wall photo that the
 colour guard still lets through (see "The failure we designed for"). It is marked `strict`, so if the guard ever starts
 rejecting that photo the test will fail and tell us to update the documentation.
 
@@ -348,6 +348,33 @@ List alert policies:
 gcloud monitoring policies list \
   --project=lemon-mlops-project
 ```
+
+### Diagnosing a drop in quality
+
+The alerts say *that* a rate moved. `make diagnose` asks *what* moved and whether the cause looks like the
+photos or the model. It compares the most recent batches with earlier ones using only the CSVs the batch
+already writes (`results/<batch_id>.csv`):
+
+```bash
+make diagnose                                        # data/output/results/*.csv (after make run-batch)
+make diagnose ARGS="--from-cloud"                    # results/ in the bucket, through the cloud layer
+make diagnose ARGS="--recent-batches 2 --json"       # last 2 batches vs everything earlier, as JSON
+make diagnose ARGS="--since 2026-10-11T00:00:00Z"    # batches started at or after this UTC time
+```
+
+| Signal | What a change suggests |
+| --- | --- |
+| Rejected rate and its status mix | Mostly `REJECTED_BLURRED`: image quality. `REJECTED_OOD_NON_LEAF`: non-leaf photos. `REJECTED_CORRUPTED` or `REJECTED_RESOLUTION`: upload problem. |
+| Low-confidence rate, mean confidence, confidence distribution (PSI) | Confidence falls while the photos look the same: the model is unsure on in-domain data (possible concept drift). |
+| Blur score and foliage ratio (Kolmogorov-Smirnov test) | The photos themselves changed (light, camera, background, season): covariate drift. |
+| Predicted-class mix (PSI) | The mix of diseases changed; with steady confidence this is a population shift, not necessarily a fault. |
+
+It prints a table of signals, flags the ones that moved, and lists likely causes. Distribution tests only run when
+each window has at least 30 scored photos (`--min-samples`); below that it shows the rates and says the tests were
+skipped, because small batches move a lot by chance. It cannot measure accuracy: production photos have no labels, so
+every cause is a lead for a person to check (open the `needs_inspection` files, label a sample), not a proof.
+`--fail-on-drift` makes the exit code 1 when any signal is flagged. The deployed project has scored fewer than 30
+photos in total so far, so on it the command reports the rates and says the tests were skipped.
 
 ### Monitoring validation and evidence
 

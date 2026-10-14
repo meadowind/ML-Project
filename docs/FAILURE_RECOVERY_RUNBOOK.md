@@ -151,7 +151,10 @@ The configured alert threshold is `rejected_rate >= 0.10`.
 3. Review `rejected_samples`, `by_status`, and input images to identify
    recurring causes such as invalid, blurry, or out-of-distribution
    images.
-4. Determine whether the rejection is expected input protection or
+4. Run `make diagnose` (add `ARGS="--from-cloud"` to read the bucket) to
+   see which status dominates the rejections and whether the image
+   statistics changed compared with earlier batches.
+   Determine whether the rejection is expected input protection or
    indicates an input-quality or pipeline issue.
 5. Preserve the original evidence. Do not disable the validation guard
    simply to reduce the rejection rate.
@@ -168,8 +171,10 @@ The configured alert threshold is `low_confidence_rate >= 0.30`.
    `needs_inspection_count` in the batch event.
 3. Inspect the summary JSON for the confidence histogram and per-status
    breakdown.
-4. Check image quality and whether the images are suitable for the
-   current model.
+4. Run `make diagnose` (add `ARGS="--from-cloud"` to read the bucket) to
+   compare confidence and image statistics with earlier batches. Check
+   image quality and whether the images are suitable for the current
+   model.
 5. Route uncertain results for inspection according to the project's
    review process. Do not automatically treat low-confidence predictions
    as confirmed classifications.
