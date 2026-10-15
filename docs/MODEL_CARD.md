@@ -33,6 +33,9 @@ Seed, data revision and data hash are pinned; each run is logged in MLflow and r
 ## Guardrails (`src/model/validator.py`)
 Byte integrity, resolution of at least 64x64, blur (Laplacian variance on 256x256, cutoff 65.0), and plant tissue of at least 5% (foliage green, necrotic brown or soot black). `enable_blur_check` and `enable_ood_check` flags allow deliberate failure demos.
 
+## Monitoring and performance drift
+Production photos have no labels, so accuracy is not measured after deployment; the figures above are from the held-out test set only. Quality is watched through proxies: the input guards, the `needs_inspection` flag (not Healthy, or confidence below 0.60), email alerts on the rejected rate (>= 10%) and low-confidence rate (>= 30%) per batch, and `make diagnose`, which compares recent batches with earlier ones (rejection reasons, confidence distribution, blur and foliage distributions, predicted-class mix) and names a likely cause. These signals suggest where to look; they do not prove that accuracy fell. Confirming it needs a person to label a sample of flagged photos, which is not set up. See README, "How we know when model performance drops".
+
 ## Limitations & Risks
 - **Diseased leaves can be called Healthy, confidently.** 9 of the 10 test errors are diseased leaves predicted *Healthy_Leaf* (5 of 23 Sooty_Mould, 2 of 16 Bacterial_Blight, 2 of 17 Curl_Virus), so 22% of leaves called Healthy are diseased (precision 32/41). The 0.60 threshold cannot catch this; treat "Healthy" as "not flagged" and spot-check.
 - **Single source:** curated collection conditions, not varied orchard camera angles. Training classes range from 70 (Anthracnose) to 147 (Healthy_Leaf) images.

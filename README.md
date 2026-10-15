@@ -349,6 +349,25 @@ gcloud monitoring policies list \
   --project=lemon-mlops-project
 ```
 
+### How we know when model performance drops
+
+Production photos arrive without labels, so **accuracy cannot be measured in production**; the held-out test result
+(0.951) is the only accuracy figure, and it describes the model on its test set, not on later traffic. What we watch
+instead are signals that move when quality is likely to be dropping, in four layers:
+
+| Layer | Where | What it catches |
+| --- | --- | --- |
+| 1. Input guards | Every photo, before the model | Corrupted, too-small, blurred and non-leaf photos are rejected and quarantined instead of being scored |
+| 2. Per-photo flag | Every scored photo | `needs_inspection` is true when the prediction is not Healthy or the confidence is below 0.60 |
+| 3. Alerts | Every batch, by email | Rejected rate >= 10%, low-confidence rate >= 30%, and no successful run (see "Alert policies") |
+| 4. Drift diagnosis | On demand, `make diagnose` | Compares recent batches with earlier ones and says whether the photos or the model's confidence changed (next section) |
+
+A rising rejected rate points at the photos (camera, upload, wrong subject). A rising low-confidence rate or a falling
+confidence on unchanged photos points at the model. A shift in the photos' blur or foliage distribution, or in the mix
+of predicted diseases, is drift that the alerts alone do not show: it can happen while every rate stays under its
+threshold. These are proxies and leads, not proof. Confirming a real accuracy drop needs labels: a person would label a
+sample of the `needs_inspection` photos and compare with the predictions. We have not built that loop.
+
 ### Diagnosing a drop in quality
 
 The alerts say *that* a rate moved. `make diagnose` asks *what* moved and whether the cause looks like the
@@ -373,8 +392,9 @@ It prints a table of signals, flags the ones that moved, and lists likely causes
 each window has at least 30 scored photos (`--min-samples`); below that it shows the rates and says the tests were
 skipped, because small batches move a lot by chance. It cannot measure accuracy: production photos have no labels, so
 every cause is a lead for a person to check (open the `needs_inspection` files, label a sample), not a proof.
-`--fail-on-drift` makes the exit code 1 when any signal is flagged. The deployed project has scored fewer than 30
-photos in total so far, so on it the command reports the rates and says the tests were skipped.
+`--fail-on-drift` makes the exit code 1 when any signal is flagged. On the deployed project the tests ran for the
+first time on batch `20261014T190027Z` (38 scored photos); the output and how to read it are in
+`docs/evidence/diagnose-cloud/`. That batch was a hand-picked demo set, so the flags show the tool working, not real drift.
 
 To see it flag a real change, `make diagnose-demo SCENARIO=bad_uploads` (also `non_leaf`, `model_uncertainty`,
 `covariate_drift`, `stable`) writes **simulated** result files, clearly marked `SIMULATED`, and diagnoses them. Saved
