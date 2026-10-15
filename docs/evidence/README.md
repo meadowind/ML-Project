@@ -32,6 +32,7 @@ on 9 Oct 2026. Console times are Thailand time (UTC+7); times in the README are 
 | 23 | `23-missed-run-alert-cleared-after-recovery.png` | Policy details for `lemon-batch-missed-run-alert`; no incident was listed in the Alerts panel at capture time | Recovery evidence |
 | 24 | `cloud-logging/24-cloud-logging-batch-finished.png`, `cloud-logging/batch-20261009T090020Z.json` | Cloud Logging query and completed-batch evidence: 6 batches, 21 files, 17 scored, 4 rejected | Cost report and operational evidence |
 | 25 | `diagnose-simulated/` | `make diagnose` run on five SIMULATED drift scenarios (not real data) | Monitoring and diagnosis evidence |
+| 26 | `diagnose-cloud/26-diagnose-from-cloud-batch-20261014.png`, `diagnose-cloud/README.md` | `make diagnose --from-cloud` on real batches: the distribution tests run on 38 scored photos of a hand-picked demo batch | Monitoring and diagnosis evidence |
 
 ## Things a reader may wonder about
 
