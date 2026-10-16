@@ -87,12 +87,12 @@ client (hash-locked in `requirements-cloud.lock`); the portability rule is that 
 
   | | GitHub Actions cron (before) | Cloud Scheduler → Cloud Run job (after) |
   |---|---|---|
-  | Configured during recorded test | every 30 min | every 30 min (historical; now every 2 hours) |
+  | Configured during recorded test | every 30 min | every 30 min during the recorded test; now every 2 hours |
   | Observed gaps between runs | 4 h 14 m 25 s and 4 h 33 m 54 s | 29 m 56 s to 30 m 04 s, over 34 consecutive gaps |
   | Start vs the scheduled minute | hours late (3 runs in 8 h 48 m, about 17 expected) | 0–7 s after the minute |
   | Worst-case wait for a new photo | more than 4 h 30 m | 30 min + job run time during recorded test; now up to 2 hours + job run time |
 
-  "After" is 35 consecutive scheduler executions, from 13:30:01 UTC on 8 Oct to 06:30:05 UTC on 9 Oct
+  "After" refers to the historical 35 consecutive scheduler executions, from 13:30:01 UTC on 8 Oct to 06:30:05 UTC on 9 Oct. The current schedule is every 2 hours in Asia/Bangkok.
   (17 hours, no run missing; `gcloud run jobs executions list --job lemon-batch` lists them). The GitHub
   workflow is now manual only (`workflow_dispatch`), for replays and the failure demo. A run that finds no
   new photos writes no summary and does not load the model.
