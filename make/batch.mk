@@ -69,7 +69,7 @@ deploy-batch:
 run-batch-cloud:
 	gcloud run jobs execute lemon-batch --wait --region "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)"
 
-# Fire the Cloud Scheduler entry immediately (what the clock does every 30 minutes).
+# Fire the Cloud Scheduler entry immediately (what the Cloud Scheduler cadence controls).
 scheduler-run-now:
 	gcloud scheduler jobs run lemon-batch-every-30min --location "$$(grep ^REGION= cloud.env | cut -d= -f2)" --project "$$(grep ^PROJECT_ID= cloud.env | cut -d= -f2)"
 

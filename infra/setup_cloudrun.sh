@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Create or update the scheduled batch on Cloud Run: a job that runs the batch container,
-# and a Cloud Scheduler entry that starts it every 30 minutes. Safe to run again (it updates).
+# and a Cloud Scheduler entry that starts it on the configured schedule. Safe to run again (it updates).
 #
 #   bash infra/setup_cloudrun.sh <digest-pinned image>
 #   e.g. the reference printed by `make image-push`, or by the CI build of main:

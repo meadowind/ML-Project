@@ -202,7 +202,7 @@ def run_batch(intake: Path, archive: Path, quarantine: Path, output: Path,
     new_files = find_new_files(intake, archive, quarantine, reprocess)
     if not new_files:
         log.emit("batch_skipped", reason="no new files")
-        # No log file for a skipped run: it would upload an empty batch every 30 minutes.
+        # No log file for a skipped run: it would upload an empty batch on every scheduled run.
         try:
             (output / "logs" / f"{batch_id}.jsonl").unlink()
         except FileNotFoundError:

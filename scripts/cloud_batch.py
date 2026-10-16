@@ -1,6 +1,6 @@
 """One scheduled cycle inside the container: pull new photos, score them, push results.
 
-    python scripts/cloud_batch.py                # what Cloud Run executes every 30 minutes
+    python scripts/cloud_batch.py                # what Cloud Run executes on each scheduled run
     python scripts/cloud_batch.py --reprocess    # replay everything in intake/
 
 Same three steps as `make run-batch` (sync_down -> src.batch.run -> sync_up), in one
