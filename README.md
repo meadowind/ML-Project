@@ -454,7 +454,7 @@ time (list prices; the free-trial credit is not shown): **THB 19.77** in total.
 | Cloud Storage, Scheduler, other | 0.00 | 0% | |
 
 The job costs about **THB 0.087 per execution** (11.71 / 135), paid whether or not a run finds new photos. At one run every
-30 minutes that is about THB 4.2 a day at list price, before any free tier or credit. This is an average of billed CPU and
+30 minutes (the original schedule) that is about THB 4.2 a day at list price, before any free tier or credit. This is an average of billed CPU and
 memory (about 54 billed seconds per execution), not a measured run time; console durations were 12-40 s.
 
 **Cost per 1,000 predictions.** In the same window (13:30 UTC on 8 Oct to 07:30 UTC on 11 Oct) the logs show 6 batches
@@ -463,6 +463,53 @@ Cloud Run (11.71 / 17) and THB 1,163 with every billed item (19.77 / 17). It is 
 scheduled empty runs dominate. The marginal cost of one photo is small: about one second of compute, roughly **THB 1.6 per
 1,000 photos** (an estimate from run times, not a billed figure). Spreading the fixed THB 4.2 a day over volume gives about
 THB 43 per 1,000 at 100 photos a day, THB 6 at 1,000 a day and THB 2 at 10,000 a day.
+
+## Cost reduction: fewer empty runs
+
+On 12 Oct 2026 (16:28 Thai time) the Cloud Scheduler entry was changed from every 30 minutes to every 2 hours
+(`0 */2 * * *`, `Asia/Bangkok`), and `lemon-batch-missed-run-alert` was changed from 60 minutes to 4 hours without a
+successful execution. The reason is in the cost table above: 129 of the first 135 executions found no new photos, and a run
+costs about THB 0.087 whether or not it finds any. (The scheduler entry keeps its old name; see "Behaviour worth knowing".)
+
+**Runs per day.** Dates are UTC. Counted with
+`gcloud run jobs executions list --job lemon-batch --region asia-southeast1 --format='value(metadata.creationTimestamp)' | cut -c1-10 | sort | uniq -c`.
+
+| | 9 Oct | 10 Oct | 11 Oct | 12 Oct | 13 Oct | 14 Oct | 15 Oct |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Runs | 47 | 46 | 52 | 26 | 12 | 12 | 12 |
+| Schedule | 30 min | 30 min | 30 min, a few manual runs | changed mid-day | 2 h | 2 h | 2 h |
+
+**Effect on cost (estimate).**
+
+| | Every 30 minutes | Every 2 hours |
+|---|---:|---:|
+| Runs per day | about 48 | 12 |
+| Cloud Run cost per run | about THB 0.087 | about THB 0.09-0.11 |
+| Cloud Run cost per day | about THB 4.3 | about THB 1.3 |
+
+That is roughly 70% lower. The "every 2 hours" figure is the difference between the billing exports of 13 Oct and 15 Oct
+(18:01 Thai time): Cloud Run CPU and memory rose by THB 2.42 over about two days. The cost per run did not change, so the
+saving comes entirely from running less often. These are list prices from cumulative month-to-date exports, not daily
+reports, and the free tier and credit are not applied; allow about 10% either way. The month-to-date total keeps rising
+(THB 19.77, 29.54, then 34.77 across three exports) because it is cumulative, not because the new schedule costs more.
+
+**Trade-offs.** A photo can now wait up to about 2 hours instead of 30 minutes, and a failed run is flagged after about
+4 hours instead of 1. If the missed-run alert raises false alarms, raise its window to 5 hours.
+
+**Comparing before and after fairly.** Use full days that ran on one schedule only: 9-10 Oct before, 13-15 Oct after; skip
+11 Oct (manual runs) and 12 Oct (changed mid-day). Pull Billing > Reports one day at a time, Cloud Run only (CPU and memory),
+and check the report's time zone because its day boundaries may not match Thai time. Compare THB per day, THB per run and
+photos scored per day, and leave out any day with demo or test uploads, since runs that find photos take longer.
+
+**Still open.**
+- **Artifact Registry storage keeps growing.** It was THB 3.99 on 13 Oct and THB 6.80 on 15 Oct, about THB 1.5 a day, which
+  is now more than the Cloud Run cost. The CI publishes an image on every commit to `main` and nothing is deleted. A cleanup
+  policy has not been set yet. Before setting one, keep the digest the Cloud Run job uses, the image registered in Vertex AI
+  Model Registry, the training image digest in the lineage, and any digest cited in `docs/evidence/`, so replays and
+  `make reload-check` keep working; run the policy in dry-run mode first.
+- **Options considered and not done.** Upload-triggered runs instead of a timer (needs a lock so overlapping executions
+  cannot score the same photo twice, and a new missed-run alert design); right-sizing the job from 2 vCPU / 2 GiB to
+  1 vCPU / 1 GiB (not tested); and shortening the roughly 10 s start-up of an empty run (not profiled).
 
 ## Shutting everything down
 ```bash
@@ -487,7 +534,7 @@ step because GitHub's OIDC token service returned HTTP 500; nothing had been wri
 processed the same photos. The runs came 4–5 hours apart, which is why the schedule moved to Cloud Scheduler.
 
 **On Cloud Scheduler + Cloud Run (current).** Scheduler executions started 0–7 s after the minute, every
-30 minutes, 35 times in a row without a gap. A manual execution scored a newly uploaded photo and wrote its summary. After the cloud-trained
+30 minutes (the original cadence), 35 times in a row without a gap. A manual execution scored a newly uploaded photo and wrote its summary. After the cloud-trained
 model (`v2.1.0`) was deployed, 4 new photos (3 *Sooty_Mould*, 1 *Bacterial_Blight*) were scored in 11 s
 and all four were flagged.
 
