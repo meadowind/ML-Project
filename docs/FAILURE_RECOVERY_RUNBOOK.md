@@ -275,9 +275,11 @@ and missed-run alert policies were each verified by receiving an email.
 - The `lemon-batch-missed-run-alert` policy fired after no successful
   execution was observed for more than 60 minutes, and its email
   notification was received.
-- Cloud Scheduler `lemon-batch-every-30min` was resumed by an authorized
-  team account and verified as `ENABLED` with schedule `*/30 * * * *`
-  in UTC.
+- At the time of the October 10 recovery test, Cloud Scheduler
+  `lemon-batch-every-30min` was resumed by an authorized team account
+  and verified as `ENABLED` with schedule `*/30 * * * *` in UTC.
+- Current schedule (changed October 12, 2026, at 16:28:26 ICT):
+  `0 */2 * * *` in `Asia/Bangkok`.
 - The subsequent Cloud Run Job execution `lemon-batch-8kkt8`, created
   at `2026-10-10 18:30:02 UTC`, completed successfully with 1 of 1 task
   completed. The reported execution duration was 12.37 seconds.
