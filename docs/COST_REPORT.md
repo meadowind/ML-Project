@@ -11,6 +11,7 @@
 - Execution window: 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC
 - Scored predictions in the same window (Cloud Logging): 17, in 6 batches
 - Purpose: Summarize observed project costs and report the cost per 1,000 scored predictions, observed and marginal.
+- Update: the schedule changed from every 30 minutes to every 2 hours on 12 October 2026; the effect is in Section 11.
 
 The billing figures are from the export available at the snapshot time and may change as additional usage is recorded. The billing period (1–11 October) is longer than the execution and prediction window (8 October 13:30 UTC to 11 October 07:30 UTC). The Cloud Run charges are assumed to fall in that window because the job started running on 8 October; other items are shown for context. The billing export also lags, so ratios are indicative.
 
@@ -54,7 +55,7 @@ Using 135 executions:
 
 The CPU component averages approximately THB 0.078 per execution, and memory averages approximately THB 0.009 per execution.
 
-This is a list-price average of billed Cloud Run CPU and memory per execution. The Cloud Run free tier and Free Trial credits are not applied. At 48 scheduled runs per day (one every 30 minutes), the estimated cost is approximately THB 4.20 per day.
+This is a list-price average of billed Cloud Run CPU and memory per execution. The Cloud Run free tier and Free Trial credits are not applied. At 48 scheduled runs per day (one every 30 minutes, the schedule used until 12 October 2026), the estimated cost is approximately THB 4.20 per day.
 
 The billing export records 14,520 CPU-seconds at 2 vCPU. This corresponds to approximately 54 billed seconds per execution when divided by 135 executions and 2 vCPU. This is a billed average derived from aggregate usage, not a measured individual execution duration. Console-observed execution durations were approximately 12–40 seconds.
 
@@ -64,7 +65,7 @@ The billing export records 14,520 CPU-seconds at 2 vCPU. This corresponds to app
 
 Cloud Run CPU and memory charges vary with billed resource usage. For the observed period, these charges totalled THB 11.71 across 135 executions, or approximately THB 0.087 per execution on average.
 
-The job is scheduled every 30 minutes whether or not new photos are available. Executions that find no new files can still contribute to operating costs without increasing the scored-prediction count.
+Until 12 October 2026 the job was scheduled every 30 minutes whether or not new photos were available (it now runs every 2 hours; see Section 11). Executions that find no new files can still contribute to operating costs without increasing the scored-prediction count.
 
 ### Recurring or capacity-related costs
 
@@ -100,7 +101,7 @@ The free tier and Free Trial credits are not applied. The THB 5.35 egress is a o
 1. The billing export covers 1–11 October 2026 at the snapshot taken on 11 October 2026, 14:55 ICT. The 135-execution count covers 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC; these periods are not fully aligned.
 2. Cloud Run CPU and memory total THB 11.71 over 135 executions, approximately THB 0.087 per execution before applying the free tier or Free Trial credits.
 3. The export records 14,520 vCPU-seconds over 135 executions at 2 vCPU, equivalent to approximately 54 billed seconds per execution. This is an aggregate billed-time average, not a measured individual runtime. Console-observed durations were approximately 12–40 seconds, and the gap is not fully explained.
-4. At 48 scheduled runs per day, Cloud Run CPU and memory cost is approximately THB 4.20 per day at list price, before free-tier usage or credits.
+4. At 48 scheduled runs per day (the original 30-minute schedule), Cloud Run CPU and memory cost is approximately THB 4.20 per day at list price, before free-tier usage or credits.
 5. Cloud Run costs are largely run-related overhead. Runs that find no new photos can still incur cost without scoring photos. With 17 scored predictions in the window, the observed cost per 1,000 scored predictions is THB 689 (Cloud Run) and THB 1,163 (all billed items); the marginal cost is estimated at about THB 1.6 per 1,000 photos. The 17-prediction sample is small, so treat the observed figures as indicative.
 6. Artifact Registry egress was THB 5.35 for 1.33 GiB and is attributed to CI image pulls before the move to Cloud Scheduler. The amount did not increase between the reported exports.
 7. Artifact Registry storage was THB 1.57. Vertex AI training-related CPU, RAM, and SSD charges totalled THB 1.13 and should be distinguished from inference operating costs.
@@ -128,3 +129,87 @@ These links are official pricing references. The reported THB values in this doc
 - Cloud Run execution count of 135 for the period 8 October 2026, 13:30 UTC to 11 October 2026, 07:30 UTC.
 - Cloud Logging query for `resource.type="cloud_run_job"` and `resource.labels.job_name="lemon-batch"`.
 - Batch summary logs containing `batch_finished` events.
+
+## 11. Update: Effect of the Schedule Change (12–16 October 2026)
+
+Sections 1–10 describe the 11 October 2026 snapshot and are kept as a dated record. Wherever they say the job runs every 30 minutes, that was the schedule until 12 October 2026. This section records the change and what the later billing exports show.
+
+### 11.1 Change made
+
+- On 12 October 2026 at 16:28 Thai time (09:28 UTC) the Cloud Scheduler entry `lemon-batch-every-30min` was changed from `*/30 * * * *` to `0 */2 * * *`, time zone `Asia/Bangkok`. The entry keeps its name because Cloud Scheduler jobs cannot be renamed.
+- `lemon-batch-missed-run-alert` was changed from 1 hour to 4 hours without a successful execution.
+- Reason: Section 2 found that 129 of 135 executions had no new files, and Section 4 puts the cost of an execution at about THB 0.087 whether or not it finds any.
+
+### 11.2 Executions per day
+
+Dates are UTC. Counted with `gcloud run jobs executions list --job lemon-batch --region=asia-southeast1 --format='value(metadata.creationTimestamp)' | cut -c1-10 | sort | uniq -c`.
+
+| | 9 Oct | 10 Oct | 11 Oct | 12 Oct | 13 Oct | 14 Oct | 15 Oct |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Executions | 47 | 46 | 52 | 26 | 12 | 12 | 12 |
+| Schedule | 30 min | 30 min | 30 min, a few manual runs | changed mid-day | 2 h | 2 h | 2 h |
+
+16 October had 5 executions at the time of the check (01:00 to 09:00 UTC), as scheduled. Twelve executions a day match `0 */2 * * *`, so nothing else is starting the job.
+
+### 11.3 Billing exports compared
+
+The exports are cumulative for 1–31 October 2026, in THB at list price, with no daily breakdown.
+
+| Export | Cloud Run CPU-seconds | Cloud Run CPU + memory | Artifact Registry storage | Egress, Vertex AI, other | Total |
+|---|---:|---:|---:|---:|---:|
+| 11 October, 14:55 ICT (Section 3) | 14,520 | 11.71 | 1.57 | 6.49 | 19.77 |
+| 13 October (time not recorded) | 23,640 | 19.06 | 3.99 | 6.49 | 29.54 |
+| 15 October, 18:01 ICT | 26,640 | 21.48 | 6.80 | 6.49 | 34.77 |
+
+Egress and Vertex AI did not change between exports, as Section 5 expected. The total keeps rising because the exports are cumulative, not because the new schedule costs more.
+
+### 11.4 Cloud Run cost per execution and per day
+
+Between the 13 and 15 October exports, Cloud Run CPU and memory rose by THB 2.42 and billed CPU-seconds by 3,000, which is about 1,500 billed seconds at 2 vCPU. That interval is about two days and holds roughly 22 to 27 executions (the 13 October export time was not recorded, so the count is approximate).
+
+| | Every 30 minutes (until 12 October) | Every 2 hours (from 12 October) |
+|---|---:|---:|
+| Executions per day | about 48 | 12 |
+| Cloud Run CPU + memory per execution | about THB 0.087 | about THB 0.09–0.11 |
+| Cloud Run CPU + memory per day | about THB 4.2–4.3 | about THB 1.3 |
+
+This is roughly 70% lower. The cost per execution did not change within the uncertainty, so the saving comes from running less often. Cross-check: 12 executions x THB 0.09–0.11 is THB 1.1–1.3 a day.
+
+### 11.5 Cost per 1,000 predictions at the new schedule (estimate)
+
+The observed figures in Section 6 (THB 689 and THB 1,163) are not recomputed, because that needs a scored-prediction count over a window aligned with the billing cutoff. Using the Section 6 method with the fixed cost of about THB 1.3 a day and the marginal THB 1.6 per 1,000 photos:
+
+| Photos per day | Every 30 minutes (Section 6) | Every 2 hours |
+|---:|---:|---:|
+| 100 | about THB 43 | about THB 15 |
+| 1,000 | about THB 6 | about THB 3 |
+| 10,000 | about THB 2 | about THB 2 |
+
+These are estimates, not measurements.
+
+### 11.6 Artifact Registry storage is now larger than Cloud Run per day
+
+Storage rose from THB 3.99 to THB 6.80 between the last two exports (1.30 to 2.14 GiB-months), about THB 1.5 a day, which is more than the Cloud Run cost above. At about THB 3.1 per GiB-month in the export, that implies on the order of 10–15 GiB stored on average. This is inferred from the price, not a measured repository size. The likely cause is that CI publishes an image on every commit to `main` and nothing is deleted, but the repository contents have not been inspected (the account used for these checks could not list repositories). No cleanup policy has been set.
+
+### 11.7 Trade-offs
+
+- A photo can wait up to about 2 hours plus run time (previously 30 minutes).
+- A failed run is flagged after about 4 hours (previously 1 hour). If the missed-run alert gives false alarms, raise the window to 5 hours.
+
+### 11.8 Comparing before and after fairly
+
+- Use full days on one schedule only: 9–10 October before, 13–15 October after. Skip 11 October (manual runs) and 12 October (changed mid-day).
+- In Billing, Reports, pull one day at a time, Cloud Run only (CPU and memory). Check the report's time zone, because its day boundaries may not match Thai time.
+- Compare THB per day, THB per execution and photos scored per day. Exclude days with demo or test uploads, since runs that find photos take longer.
+
+### 11.9 Limitations
+
+- Exports are cumulative, and the 13 October export time was not recorded (Section 9 asked for this). Per-day figures are differences between exports, so allow about 10% either way.
+- Billing usage lags, and the free tier and Free Trial credits are not applied.
+- The implied stored size in 11.6 is an inference.
+
+### 11.10 Follow-up
+
+- Re-export billing by day after three full days on the new schedule and replace the estimates in 11.4 and 11.5.
+- Set an Artifact Registry cleanup policy in dry-run mode first. Keep the digest used by the Cloud Run job, the image registered in Vertex AI Model Registry, the training image digest in the lineage, and digests cited in `docs/evidence/`.
+- Not done: upload-triggered runs (needs a lock against overlapping executions and a new missed-run alert), right-sizing from 2 vCPU / 2 GiB to 1 vCPU / 1 GiB, and shortening the roughly 10 s start-up of an empty run.

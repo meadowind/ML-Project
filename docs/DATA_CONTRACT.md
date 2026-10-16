@@ -18,8 +18,8 @@ Everything lives under one prefix in the project bucket: `gs://<project>-data/le
 `batch_skipped` to its own output (Cloud Logging) and exits. So "no summary for a while" means "no new
 photos", not "the job is broken". To check that the schedule itself is alive, look at the executions of
 the Cloud Run job `lemon-batch` (`gcloud run jobs executions list --job lemon-batch --region
-asia-southeast1`) or at the Cloud Scheduler entry `lemon-batch-every-30min`: an execution exists every 30
-minutes whether or not any photo was scored.
+asia-southeast1`) or at the Cloud Scheduler entry `lemon-batch-every-30min`: an execution exists every 2 hours
+(every 30 minutes until 12 Oct 2026) whether or not any photo was scored.
 
 ## `summary/<batch_id>.json`
 ```json
@@ -66,7 +66,8 @@ in Cloud Logging under the Cloud Run job `lemon-batch`, including `batch_skipped
 - the message names the `batch_id`, the error count (`files_rejected`) and sample filenames (`rejected_samples`);
 - **missed run** (a health signal, not a data signal): no successful execution of the Cloud Run job
   `lemon-batch` for about 45–60 minutes. It must be based on job executions, not on summaries, because a
-  run with no new photos writes none.
+  run with no new photos writes none. Deployed value: 4 hours since 12 Oct 2026, because the job now runs
+  every 2 hours (it was 60 minutes at the original 30-minute schedule).
 
 Known limit worth showing on the dashboard: the classifier is often **confident on non-leaf photos**
 (see README, "The failure we designed for"), which is why a confidence alert alone is not enough and
