@@ -11,7 +11,7 @@ lemon image-classification batch pipeline.
 | Region | `asia-southeast1` |
 | Cloud Run Job | `lemon-batch` |
 | Cloud Scheduler | `lemon-batch-every-30min` |
-| Schedule | Every 30 minutes, UTC |
+| Schedule | Every 2 hours (`0 */2 * * *`, `Asia/Bangkok`); every 30 minutes (UTC) until 12 Oct 2026 |
 | Cloud Storage prefix | `gs://lemon-mlops-project-data/lemon/` |
 
 The Cloud Run Job runs `python scripts/cloud_batch.py`.
@@ -79,7 +79,7 @@ gcloud scheduler jobs describe lemon-batch-every-30min \
 ```
 
 Confirm that the scheduler is enabled and uses the expected schedule.
-The configured cron schedule is `*/30 * * * *` in UTC.
+The configured cron schedule is `0 */2 * * *` in the `Asia/Bangkok` time zone (it was `*/30 * * * *` in UTC until 12 Oct 2026).
 
 ## 4. Investigate logs
 
@@ -186,7 +186,7 @@ Cloud Run failed.
 ### Scenario D: Missed-run alert
 
 The missed-run policy triggers when no successful execution is observed
-for more than 60 minutes.
+for more than 4 hours (60 minutes until 12 Oct 2026).
 
 1. Inspect recent Cloud Run executions.
 2. Inspect the Scheduler state and schedule.
