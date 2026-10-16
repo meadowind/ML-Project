@@ -15,7 +15,7 @@ cd "$(dirname "$0")/.."
 IMAGE_REF="${1:-${IMAGE_REF:-}}"
 [ -n "$IMAGE_REF" ] || { echo "usage: bash infra/setup_cloudrun.sh <repo@sha256:... image reference>"; exit 1; }
 case "$IMAGE_REF" in
-  *@sha256:*) ;
+  *@sha256:*) ;;
   *) echo "IMAGE_REF must be digest-pinned (repo@sha256:...), not a tag: $IMAGE_REF"; exit 1 ;;
 esac
 
