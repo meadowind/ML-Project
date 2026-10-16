@@ -26,6 +26,7 @@ set -a; . "./$ENV_FILE"; set +a
 JOB="${BATCH_JOB:-lemon-batch}"
 SCHEDULE_NAME="${BATCH_SCHEDULE_NAME:-lemon-batch-every-30min}"
 CRON="${BATCH_CRON:-0 */2 * * *}"
+SCHED_TZ="${BATCH_TIMEZONE:-Asia/Bangkok}"
 RUN_SA="$IDENTITY_REF"                                   # lemon-batch@<project>
 SCHED_SA="lemon-scheduler@${PROJECT_ID}.iam.gserviceaccount.com"
 LABELS="course=itcs355,student=${PROJECT_ID},lab=capstone"
@@ -57,13 +58,13 @@ else
   VERB=create
 fi
 gcloud scheduler jobs "$VERB" http "$SCHEDULE_NAME" --project "$PROJECT_ID" --location "$REGION" \
-  --schedule "$CRON" --time-zone "UTC" \
+  --schedule "$CRON" --time-zone "$SCHED_TZ" \
   --uri "$URI" --http-method POST \
   --oauth-service-account-email "$SCHED_SA"
 
 echo
 echo "Cloud Run job:   $JOB   (image $IMAGE_REF)"
-echo "Scheduler entry: $SCHEDULE_NAME   ($CRON UTC)   -> $URI"
+echo "Scheduler entry: $SCHEDULE_NAME   ($CRON, $SCHED_TZ)   -> $URI"
 echo
 echo "Try it now:   make run-batch-cloud        (runs the job once and waits for it)"
 echo "              make scheduler-run-now      (fires the scheduler entry, as the clock would)"
