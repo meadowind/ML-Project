@@ -1,0 +1,95 @@
+[
+  {
+    "bucketOptions": {
+      "explicitBuckets": {
+        "bounds": [
+          1.0,
+          2.0,
+          5.0,
+          10.0,
+          20.0,
+          30.0,
+          60.0,
+          120.0,
+          300.0,
+          600.0
+        ]
+      }
+    },
+    "createTime": "2026-10-08T16:48:44.064196278Z",
+    "description": "Duration of completed lemon batch executions in seconds",
+    "filter": "resource.type=\"cloud_run_job\"\nAND resource.labels.job_name=\"lemon-batch\"\nAND jsonPayload.event=\"batch_finished\"\n",
+    "metricDescriptor": {
+      "description": "Duration of completed lemon batch executions in seconds",
+      "metricKind": "DELTA",
+      "name": "projects/lemon-mlops-project/metricDescriptors/logging.googleapis.com/user/lemon-batch-duration-seconds",
+      "type": "logging.googleapis.com/user/lemon-batch-duration-seconds",
+      "unit": "s",
+      "valueType": "DISTRIBUTION"
+    },
+    "name": "lemon-batch-duration-seconds",
+    "resourceName": "projects/lemon-mlops-project/metrics/lemon-batch-duration-seconds",
+    "updateTime": "2026-10-08T16:48:44.064196278Z",
+    "valueExtractor": "EXTRACT(jsonPayload.duration_seconds)"
+  },
+  {
+    "bucketOptions": {
+      "explicitBuckets": {
+        "bounds": [
+          0.0,
+          0.1,
+          0.2,
+          0.3,
+          0.5,
+          0.75,
+          1.0
+        ]
+      }
+    },
+    "createTime": "2026-10-08T16:47:11.940727147Z",
+    "description": "Low-confidence prediction rate per completed lemon batch",
+    "filter": "resource.type=\"cloud_run_job\"\nAND resource.labels.job_name=\"lemon-batch\"\nAND jsonPayload.event=\"batch_finished\"\n",
+    "metricDescriptor": {
+      "description": "Low-confidence prediction rate per completed lemon batch",
+      "metricKind": "DELTA",
+      "name": "projects/lemon-mlops-project/metricDescriptors/logging.googleapis.com/user/lemon-batch-low-confidence-rate",
+      "type": "logging.googleapis.com/user/lemon-batch-low-confidence-rate",
+      "unit": "1",
+      "valueType": "DISTRIBUTION"
+    },
+    "name": "lemon-batch-low-confidence-rate",
+    "resourceName": "projects/lemon-mlops-project/metrics/lemon-batch-low-confidence-rate",
+    "updateTime": "2026-10-08T16:47:11.940727147Z",
+    "valueExtractor": "EXTRACT(jsonPayload.low_confidence_rate)"
+  },
+  {
+    "bucketOptions": {
+      "explicitBuckets": {
+        "bounds": [
+          0.0,
+          0.1,
+          0.2,
+          0.3,
+          0.5,
+          0.75,
+          1.0
+        ]
+      }
+    },
+    "createTime": "2026-10-08T16:46:28.045391230Z",
+    "description": "Rejected file rate per completed lemon batch",
+    "filter": "resource.type=\"cloud_run_job\"\nAND resource.labels.job_name=\"lemon-batch\"\nAND jsonPayload.event=\"batch_finished\"\n",
+    "metricDescriptor": {
+      "description": "Rejected file rate per completed lemon batch",
+      "metricKind": "DELTA",
+      "name": "projects/lemon-mlops-project/metricDescriptors/logging.googleapis.com/user/lemon-batch-rejected-rate",
+      "type": "logging.googleapis.com/user/lemon-batch-rejected-rate",
+      "unit": "1",
+      "valueType": "DISTRIBUTION"
+    },
+    "name": "lemon-batch-rejected-rate",
+    "resourceName": "projects/lemon-mlops-project/metrics/lemon-batch-rejected-rate",
+    "updateTime": "2026-10-08T16:46:28.045391230Z",
+    "valueExtractor": "EXTRACT(jsonPayload.rejected_rate)"
+  }
+]

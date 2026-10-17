@@ -1,0 +1,6 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261011T143621Z,demo_blurv2.jpg,REJECTED_BLURRED,,,,v2.1.0,2.594,,Laplacian variance 2.6 < threshold 65.0,2026-10-11T14:36:34Z
+batch-20261011T143621Z,demo_corruptv2.jpg,REJECTED_CORRUPTED,,,,v2.1.0,,,Unreadable byte stream: Truncated File Read,2026-10-11T14:36:34Z
+batch-20261011T143621Z,test_Deficiency_Leaf_0200v2.jpg,SCORED,Deficiency_Leaf,1.0,true,v2.1.0,1214.454,0.439,,2026-10-11T14:36:35Z
+batch-20261011T143621Z,test_Healthy_Leaf_0199v2.jpg,SCORED,Healthy_Leaf,1.0,false,v2.1.0,577.519,0.547,,2026-10-11T14:36:35Z
+batch-20261011T143621Z,test_Healthy_Leaf_0203v2.jpg,SCORED,Healthy_Leaf,1.0,false,v2.1.0,705.021,0.527,,2026-10-11T14:36:35Z

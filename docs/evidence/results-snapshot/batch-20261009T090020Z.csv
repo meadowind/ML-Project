@@ -1,0 +1,11 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261009T090020Z,m3_blur_1.jpg,REJECTED_BLURRED,,,,v2.1.0,0.352,,Laplacian variance 0.4 < threshold 65.0,2026-10-09T09:00:40Z
+batch-20261009T090020Z,m3_blur_2.jpg,REJECTED_BLURRED,,,,v2.1.0,0.352,,Laplacian variance 0.4 < threshold 65.0,2026-10-09T09:00:40Z
+batch-20261009T090020Z,m3_blur_3.jpg,REJECTED_BLURRED,,,,v2.1.0,0.352,,Laplacian variance 0.4 < threshold 65.0,2026-10-09T09:00:40Z
+batch-20261009T090020Z,m3_good_1.jpg,SCORED,Dry_Leaf,0.5965,true,v2.1.0,4673.212,1.0,,2026-10-09T09:00:41Z
+batch-20261009T090020Z,m3_good_2.jpg,SCORED,Dry_Leaf,0.5965,true,v2.1.0,4673.212,1.0,,2026-10-09T09:00:41Z
+batch-20261009T090020Z,m3_good_3.jpg,SCORED,Dry_Leaf,0.5965,true,v2.1.0,4673.212,1.0,,2026-10-09T09:00:41Z
+batch-20261009T090020Z,m3_good_4.jpg,SCORED,Dry_Leaf,0.5965,true,v2.1.0,4673.212,1.0,,2026-10-09T09:00:41Z
+batch-20261009T090020Z,m3_good_5.jpg,SCORED,Dry_Leaf,0.5965,true,v2.1.0,4673.212,1.0,,2026-10-09T09:00:41Z
+batch-20261009T090020Z,m3_good_6.jpg,SCORED,Dry_Leaf,0.5965,true,v2.1.0,4673.212,1.0,,2026-10-09T09:00:41Z
+batch-20261009T090020Z,m3_tiny_1.jpg,REJECTED_RESOLUTION,,,,v2.1.0,,,Resolution (16x16) < 64x64 minimum,2026-10-09T09:00:41Z

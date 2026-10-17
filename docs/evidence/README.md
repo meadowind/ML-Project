@@ -34,6 +34,8 @@ on 9 Oct 2026. Console times are Thailand time (UTC+7); times in the README are 
 | 25 | `diagnose-simulated/` | `make diagnose` run on five SIMULATED drift scenarios (not real data) | Monitoring and diagnosis evidence |
 | 26 | `diagnose-cloud/26-diagnose-from-cloud-batch-20261014.png`, `diagnose-cloud/README.md` | `make diagnose --from-cloud` on real batches: the distribution tests run on 38 scored photos of a hand-picked demo batch | Monitoring and diagnosis evidence |
 | 27 | `27-rejected-rate-alert-resolved-email.png` | Email notification confirming that the `lemon-batch-rejected-rate-alert` incident was resolved/closed | Evidence of alert resolution notification delivery |
+| 28 | `cloud-config/` | Configuration of the alert policies, log-based metrics, dashboard, Cloud Run job and scheduler, exported before teardown, with recreate steps | Recreating the deployment after teardown |
+| 29 | `results-snapshot/` | The 15 batch result files from the bucket, so `make diagnose` can be re-run after teardown | Reproducing the diagnose output |
 ## Things a reader may wonder about
 
 - **The MLflow run is named `v2.0.0`.** The cloud job ran before the version bump to `v2.1.0`, and the run name is taken from

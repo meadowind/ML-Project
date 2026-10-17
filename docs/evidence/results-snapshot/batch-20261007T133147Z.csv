@@ -1,0 +1,8 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261007T133147Z,test_Anthracnose_0019.jpg,SCORED,Anthracnose,1.0,true,v2.0.0,523.637,0.274,,2026-10-07T13:31:50Z
+batch-20261007T133147Z,test_Anthracnose_0023.jpg,SCORED,Anthracnose,0.994,true,v2.0.0,970.218,0.444,,2026-10-07T13:31:50Z
+batch-20261007T133147Z,test_Healthy_Leaf_0000.jpg,SCORED,Healthy_Leaf,1.0,false,v2.0.0,173.588,0.328,,2026-10-07T13:31:50Z
+batch-20261007T133147Z,test_Healthy_Leaf_0006.jpg,SCORED,Healthy_Leaf,1.0,false,v2.0.0,209.462,0.422,,2026-10-07T13:31:50Z
+batch-20261007T133147Z,test_Healthy_Leaf_0010.jpg,SCORED,Healthy_Leaf,1.0,false,v2.0.0,195.545,0.379,,2026-10-07T13:31:50Z
+batch-20261007T133147Z,test_Sooty_Mould_0017.jpg,SCORED,Healthy_Leaf,0.9815,false,v2.0.0,1015.639,0.617,,2026-10-07T13:31:50Z
+batch-20261007T133147Z,test_Sooty_Mould_0029.jpg,SCORED,Sooty_Mould,0.9984,true,v2.0.0,1309.779,0.432,,2026-10-07T13:31:50Z

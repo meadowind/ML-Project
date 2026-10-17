@@ -1,0 +1,141 @@
+[
+  {
+    "alertStrategy": {
+      "autoClose": "1800s",
+      "notificationPrompts": [
+        "OPENED",
+        "CLOSED"
+      ]
+    },
+    "combiner": "OR",
+    "conditions": [
+      {
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_PERCENTILE_50"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "0s",
+          "filter": "metric.type=\"logging.googleapis.com/user/lemon-batch-low-confidence-rate\" AND resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"lemon-batch\"",
+          "thresholdValue": 0.299999
+        },
+        "displayName": "Low confidence rate >= 30%",
+        "name": "projects/lemon-mlops-project/alertPolicies/14385265096894416701/conditions/14385265096894417932"
+      }
+    ],
+    "creationRecord": {
+      "mutateTime": "2026-10-08T17:26:19.025860052Z",
+      "mutatedBy": "<redacted>"
+    },
+    "displayName": "lemon-batch-low-confidence-rate-alert",
+    "documentation": {
+      "content": "Alert when the low-confidence rate of a completed lemon batch is at least 30 percent.",
+      "mimeType": "text/markdown"
+    },
+    "enabled": true,
+    "mutationRecord": {
+      "mutateTime": "2026-10-11T14:21:15.434770593Z",
+      "mutatedBy": "<redacted>"
+    },
+    "name": "projects/lemon-mlops-project/alertPolicies/14385265096894416701",
+    "notificationChannels": [
+      "projects/lemon-mlops-project/notificationChannels/14129197483932670363"
+    ]
+  },
+  {
+    "alertStrategy": {
+      "autoClose": "1800s",
+      "notificationPrompts": [
+        "OPENED",
+        "CLOSED"
+      ]
+    },
+    "combiner": "OR",
+    "conditions": [
+      {
+        "conditionThreshold": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "300s",
+              "perSeriesAligner": "ALIGN_PERCENTILE_50"
+            }
+          ],
+          "comparison": "COMPARISON_GT",
+          "duration": "0s",
+          "filter": "metric.type=\"logging.googleapis.com/user/lemon-batch-rejected-rate\" AND resource.type=\"cloud_run_job\" AND resource.labels.job_name=\"lemon-batch\"",
+          "thresholdValue": 0.099999
+        },
+        "displayName": "Rejected rate >= 10%",
+        "name": "projects/lemon-mlops-project/alertPolicies/14385265096894416718/conditions/14385265096894417949"
+      }
+    ],
+    "creationRecord": {
+      "mutateTime": "2026-10-08T17:24:29.650945192Z",
+      "mutatedBy": "<redacted>"
+    },
+    "displayName": "lemon-batch-rejected-rate-alert",
+    "documentation": {
+      "content": "Alert when the rejected file rate of a completed lemon batch is at least 10 percent.",
+      "mimeType": "text/markdown"
+    },
+    "enabled": true,
+    "mutationRecord": {
+      "mutateTime": "2026-10-11T14:20:49.939955363Z",
+      "mutatedBy": "<redacted>"
+    },
+    "name": "projects/lemon-mlops-project/alertPolicies/14385265096894416718",
+    "notificationChannels": [
+      "projects/lemon-mlops-project/notificationChannels/14129197483932670363"
+    ]
+  },
+  {
+    "alertStrategy": {
+      "autoClose": "1800s",
+      "notificationPrompts": [
+        "OPENED",
+        "CLOSED"
+      ]
+    },
+    "combiner": "OR",
+    "conditions": [
+      {
+        "conditionAbsent": {
+          "aggregations": [
+            {
+              "alignmentPeriod": "60s",
+              "perSeriesAligner": "ALIGN_SUM"
+            }
+          ],
+          "duration": "14400s",
+          "filter": "resource.type = \"cloud_run_job\" AND resource.labels.job_name = \"lemon-batch\" AND metric.type = \"run.googleapis.com/job/completed_execution_count\" AND metric.labels.result = \"succeeded\"",
+          "trigger": {
+            "count": 1
+          }
+        },
+        "displayName": "No successful lemon-batch execution",
+        "name": "projects/lemon-mlops-project/alertPolicies/17175681936753929656/conditions/3801006164137950547"
+      }
+    ],
+    "creationRecord": {
+      "mutateTime": "2026-10-08T17:21:15.129190502Z",
+      "mutatedBy": "<redacted>"
+    },
+    "displayName": "lemon-batch-missed-run-alert",
+    "documentation": {
+      "content": "Alert when lemon-batch has no successful Cloud Run execution for approximately 60 minutes.",
+      "mimeType": "text/markdown"
+    },
+    "enabled": true,
+    "mutationRecord": {
+      "mutateTime": "2026-10-12T09:40:37.693345748Z",
+      "mutatedBy": "<redacted>"
+    },
+    "name": "projects/lemon-mlops-project/alertPolicies/17175681936753929656",
+    "notificationChannels": [
+      "projects/lemon-mlops-project/notificationChannels/14129197483932670363"
+    ]
+  }
+]

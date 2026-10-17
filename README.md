@@ -569,6 +569,10 @@ make teardown-plan            # lists what would be deleted (buckets, registries
                               # Cloud Run jobs, scheduler entries, training jobs)
 make teardown CONFIRM=yes     # deletes them; scheduler entries and Cloud Run jobs go first
 ```
+Before deleting, the configuration of the monitoring resources, Cloud Run job and scheduler and the batch result files were exported to
+`docs/evidence/cloud-config/` and `docs/evidence/results-snapshot/`, with steps to recreate them. After teardown,
+`make diagnose ARGS="--results-dir docs/evidence/results-snapshot --recent-batches 1"` still works.
+
 Then check the GCP console and billing page — deletion is asynchronous. The OIDC pool and service
 accounts cost nothing; deleting the project removes them too (`gcloud projects delete <id>`).
 Verified safe with `bash infra/test_teardown.sh` (throwaway resources only).

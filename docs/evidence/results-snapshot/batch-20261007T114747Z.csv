@@ -1,0 +1,4 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261007T114747Z,blurred_leaf.jpg,REJECTED_BLURRED,,,,v2.0.0,0.352,,Laplacian variance 0.4 < threshold 65.0,2026-10-07T11:47:50Z
+batch-20261007T114747Z,corrupt.jpg,REJECTED_CORRUPTED,,,,v2.0.0,,,Unreadable byte stream: Truncated File Read,2026-10-07T11:47:50Z
+batch-20261007T114747Z,good_leaf.jpg,SCORED,Deficiency_Leaf,0.5414,true,v2.0.0,4673.212,1.0,,2026-10-07T11:47:51Z

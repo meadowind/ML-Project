@@ -1,0 +1,61 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  annotations:
+    run.googleapis.com/creator: <redacted>
+    run.googleapis.com/lastModifier: <redacted>
+  labels:
+    cloud.googleapis.com/location: asia-southeast1
+    course: itcs355
+    lab: capstone
+    run.googleapis.com/lastUpdatedTime: '2026-10-08T15:52:50.334174Z'
+    run.googleapis.com/satisfiesPzs: 'true'
+    student: lemon-mlops-project
+  name: lemon-batch
+  namespace: '681718552150'
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/client-name: gcloud
+        run.googleapis.com/client-version: 583.0.0
+        run.googleapis.com/execution-environment: gen2
+      labels:
+        client.knative.dev/nonce: jec_jet_tad
+        course: itcs355
+        lab: capstone
+        student: lemon-mlops-project
+    spec:
+      taskCount: 1
+      template:
+        spec:
+          containers:
+          - args:
+            - scripts/cloud_batch.py
+            command:
+            - python
+            env:
+            - name: CLOUD_PROVIDER
+              value: gcp
+            - name: PROJECT_ID
+              value: lemon-mlops-project
+            - name: REGION
+              value: asia-southeast1
+            - name: BLOB_URI
+              value: gs://lemon-mlops-project-data/lemon
+            - name: CONTAINER_REGISTRY
+              value: asia-southeast1-docker.pkg.dev/lemon-mlops-project/lemon
+            - name: MODEL_REGISTRY_NAME
+              value: lemon-leaf-classifier
+            - name: IDENTITY_REF
+              value: lemon-batch@lemon-mlops-project.iam.gserviceaccount.com
+            - name: DATA_DIR
+              value: /tmp/data
+            image: asia-southeast1-docker.pkg.dev/lemon-mlops-project/lemon/lemon-batch@sha256:73a09db082cf74157cc64512895c247b93588f2e11fb3fc22ea2220d735794f3
+            resources:
+              limits:
+                cpu: '2'
+                memory: 2Gi
+          maxRetries: 0
+          serviceAccountName: lemon-batch@lemon-mlops-project.iam.gserviceaccount.com
+          timeoutSeconds: '600'

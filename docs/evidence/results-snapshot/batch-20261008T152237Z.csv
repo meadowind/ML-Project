@@ -1,0 +1,5 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261008T152237Z,test_Healthy_Leaf_0012.jpg,SCORED,Healthy_Leaf,1.0,false,v2.0.0,196.846,0.365,,2026-10-08T15:22:48Z
+batch-20261008T152237Z,test_Sooty_Mould_0033.jpg,SCORED,Sooty_Mould,0.9962,true,v2.0.0,818.527,0.397,,2026-10-08T15:22:48Z
+batch-20261008T152237Z,test_Sooty_Mould_0041.jpg,SCORED,Sooty_Mould,1.0,true,v2.0.0,829.685,0.317,,2026-10-08T15:22:48Z
+batch-20261008T152237Z,test_Sooty_Mould_0057.jpg,SCORED,Healthy_Leaf,0.5447,false,v2.0.0,608.91,0.41,,2026-10-08T15:22:48Z
