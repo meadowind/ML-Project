@@ -290,6 +290,21 @@ If this runbook is reused for a future incident, verify the current
 incident state rather than assuming that the alert will always clear
 within a fixed time.
 
+### Rejected-rate alert recovery (October 2026)
+
+Evidence: `docs/evidence/27-rejected-rate-alert-resolved-email.png`.
+
+- The `lemon-batch-rejected-rate-alert` incident started on 11 October 2026 at 17:03 UTC (12 October, 00:03 ICT) and
+  closed 5 minutes 40 seconds later. Cloud Monitoring sent an "Alert recovered" email stating that the
+  `lemon-batch-rejected-rate` metric was below the threshold of 0.099999 with a value of 0.05.
+- It closed because a later batch scored photos with a rejected rate under 10% and wrote a new metric value. Nobody closed
+  the incident by hand.
+- A run that finds no new photos writes no value for this metric. To clear a rate alert, the next batch must contain new
+  scored photos (new filenames) with the rejected rate under 10% (for the low-confidence alert, a low-confidence rate under
+  30%). Use `make scheduler-run-now` instead of waiting for the next scheduled run.
+- This recovery was recorded for the rejected-rate policy only. A resolved email for the low-confidence policy has not been
+  captured. The email shows the 12 October timestamp (before the schedule change of 16:28 ICT that day).
+
 ## 9. Incident record
 
 For each incident, record:
