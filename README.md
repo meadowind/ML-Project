@@ -11,7 +11,7 @@ trust (blurry, corrupted, not a leaf). Nothing needs to be running between batch
 | | |
 |---|---|
 | User | An orchard manager who wants a short list of trees to walk to |
-| Serving pattern | **Scheduled batch** (not online): leaf photos are not urgent, and batch costs nothing while idle |
+| Serving pattern | **Scheduled batch** (not online): leaf photos are not urgent, and batch processing costs nothing while idle |
 | Freshness | A photo is scored at the next scheduled run: up to approximately 2 hours plus the job's own run time (about 10 s start-up and 11 s of scoring for 4 photos in our tests). Measured cadence, and the before/after comparison with GitHub's cron, are in "Schedule cadence" |
 | Output | One CSV row per photo (`class`, `confidence`, `needs_inspection`, `status`) and one summary JSON per batch |
 
@@ -37,7 +37,7 @@ emulation) with the image already built: about 3 minutes to download the dataset
 CPU architecture the result is identical: the Vertex AI job (x86-64) and a MacBook running the amd64 image gave
 exactly 0.9510. Training directly on an arm64 laptop, outside Docker, gave 0.9608 (2 of the 204 test images
 gave a different result), which we attribute to CPU floating-point differences. ±0.020 is about 4 images, so a 
-different x86-64 CPU should also passes; we have not tried one. It does **not** cover a different PyTorch version, 
+different x86-64 CPU should also pass; we have not tried one. It does **not** cover a different PyTorch version, 
 which gave 0.9412 on the same data, so the version is locked in `requirements-train.lock`. We did not widen the
 tolerance to hide non-determinism. The image is built for amd64 on purpose; on Apple Silicon you will see a
 platform warning and the run is slower because it is emulated.
@@ -170,8 +170,7 @@ Then put the same non-secret values in `cloud.env.ci` and update the project num
 account emails at the top of `.github/workflows/*.yml` (`setup_oidc.sh` prints them).
 Resources are labelled `course=itcs355,student=<project>,lab=capstone`.
 
-If `setup_gcp.sh` stops at an `add-iam-policy-binding` step, the Vertex AI service agent was not
-created yet: wait a minute and run the script again (it is safe to repeat).
+If `setup_gcp.sh` stops at an `add-iam-policy-binding` step, the Vertex AI service agent has not been created yet: wait a minute and run the script again (it is safe to repeat).
 
 ### The scheduled batch (Cloud Run job + Cloud Scheduler)
 ```bash
