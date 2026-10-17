@@ -1,0 +1,7 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261007T192733Z,glass.jpg,REJECTED_OOD_NON_LEAF,,,,v2.0.0,2429.588,0.027,Plant tissue ratio 0.027 < threshold 0.05,2026-10-07T19:27:35Z
+batch-20261007T192733Z,paper_sheet.jpg,REJECTED_OOD_NON_LEAF,,,,v2.0.0,503.023,0.0,Plant tissue ratio 0.000 < threshold 0.05,2026-10-07T19:27:35Z
+batch-20261007T192733Z,test_Curl_Virus_0024.jpg,SCORED,Curl_Virus,1.0,true,v2.0.0,330.46,0.362,,2026-10-07T19:27:35Z
+batch-20261007T192733Z,test_Curl_Virus_0043.jpg,SCORED,Curl_Virus,0.6107,true,v2.0.0,527.527,0.44,,2026-10-07T19:27:35Z
+batch-20261007T192733Z,test_Spider_Mites_0001.jpg,SCORED,Spider_Mites,1.0,true,v2.0.0,616.701,0.235,,2026-10-07T19:27:35Z
+batch-20261007T192733Z,test_Spider_Mites_0008.jpg,SCORED,Spider_Mites,0.9998,true,v2.0.0,598.313,0.154,,2026-10-07T19:27:35Z

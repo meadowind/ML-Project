@@ -1,0 +1,28 @@
+{
+  "attemptDeadline": "180s",
+  "httpTarget": {
+    "headers": {
+      "User-Agent": "Google-Cloud-Scheduler"
+    },
+    "httpMethod": "POST",
+    "oauthToken": {
+      "scope": "https://www.googleapis.com/auth/cloud-platform",
+      "serviceAccountEmail": "lemon-scheduler@lemon-mlops-project.iam.gserviceaccount.com"
+    },
+    "uri": "https://asia-southeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/lemon-mlops-project/jobs/lemon-batch:run"
+  },
+  "lastAttemptTime": "2026-10-17T11:00:04.682344Z",
+  "name": "projects/lemon-mlops-project/locations/asia-southeast1/jobs/lemon-batch-every-30min",
+  "retryConfig": {
+    "maxBackoffDuration": "3600s",
+    "maxDoublings": 5,
+    "maxRetryDuration": "0s",
+    "minBackoffDuration": "5s"
+  },
+  "schedule": "0 */2 * * *",
+  "scheduleTime": "2026-10-17T13:00:03.850927Z",
+  "state": "ENABLED",
+  "status": {},
+  "timeZone": "Asia/Bangkok",
+  "userUpdateTime": "2026-10-12T09:28:26.759596Z"
+}

@@ -1,0 +1,113 @@
+[
+  {
+    "displayName": "lemon-batch-monitoring",
+    "etag": "4d3d2ff7b73b5eb5c803e3d9fe0e0ede",
+    "gridLayout": {
+      "columns": "2",
+      "widgets": [
+        {
+          "title": "Rejected Rate",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_PERCENTILE_50"
+                    },
+                    "filter": "metric.type=\"logging.googleapis.com/user/lemon-batch-rejected-rate\" resource.type=\"cloud_run_job\""
+                  },
+                  "unitOverride": "1"
+                }
+              }
+            ],
+            "yAxis": {
+              "label": "Rejected Rate",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        {
+          "title": "Low Confidence Rate",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_PERCENTILE_50"
+                    },
+                    "filter": "metric.type=\"logging.googleapis.com/user/lemon-batch-low-confidence-rate\" resource.type=\"cloud_run_job\""
+                  },
+                  "unitOverride": "1"
+                }
+              }
+            ],
+            "yAxis": {
+              "label": "Low Confidence Rate",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        {
+          "title": "Batch Duration",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_PERCENTILE_50"
+                    },
+                    "filter": "metric.type=\"logging.googleapis.com/user/lemon-batch-duration-seconds\" resource.type=\"cloud_run_job\""
+                  },
+                  "unitOverride": "s"
+                }
+              }
+            ],
+            "yAxis": {
+              "label": "Seconds",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        {
+          "title": "Successful Batch Executions",
+          "xyChart": {
+            "dataSets": [
+              {
+                "plotType": "STACKED_BAR",
+                "targetAxis": "Y1",
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "aggregation": {
+                      "alignmentPeriod": "1800s",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "perSeriesAligner": "ALIGN_SUM"
+                    },
+                    "filter": "metric.type=\"run.googleapis.com/job/completed_execution_count\" resource.type=\"cloud_run_job\" resource.labels.job_name=\"lemon-batch\" metric.labels.result=\"succeeded\""
+                  },
+                  "unitOverride": "1"
+                }
+              }
+            ],
+            "yAxis": {
+              "label": "Successful Executions",
+              "scale": "LINEAR"
+            }
+          }
+        }
+      ]
+    },
+    "name": "projects/681718552150/dashboards/141eb786-b2e5-4c00-896e-6807373e7dd3"
+  }
+]

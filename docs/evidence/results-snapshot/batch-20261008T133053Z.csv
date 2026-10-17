@@ -1,0 +1,2 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261008T133053Z,test_Healthy_Leaf_0123.jpg,SCORED,Healthy_Leaf,1.0,false,v2.0.0,363.361,0.432,,2026-10-08T13:31:02Z

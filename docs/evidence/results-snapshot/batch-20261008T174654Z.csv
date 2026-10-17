@@ -1,0 +1,2 @@
+batch_id,filename,status,predicted_class,confidence,needs_inspection,model_version,blur_score,foliage_ratio,rejection_reason,processed_at
+batch-20261008T174654Z,test_Curl_Virus_0052.jpg,SCORED,Curl_Virus,0.9908,true,v2.1.0,519.645,0.376,,2026-10-08T17:46:57Z
